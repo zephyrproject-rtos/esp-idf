@@ -1,18 +1,16 @@
-# At the moment there is only one supported ESP32 SoC, and it is not
-# supported to omit the esp-dif HAL library, so we don't check for a
-# KConfig option to enable the HAL
-#
-# In the future it might look like this:
-# if(CONFIG_ESP_DIF_LIBRARY)
-# to allow users to disable the HAL
-if(CONFIG_SOC_ESP32)
+if(CONFIG_HAS_ESP_IDF)
   zephyr_include_directories(
-    ../components/esp32/include
-    ../components/soc/esp32/include
+    ../components/esp_rom/include/${CONFIG_SOC}
+    ../components/${CONFIG_SOC}/include
+    ../components/esp_common/include
+    ../components/soc/soc/include
+    ../components/soc/soc/${CONFIG_SOC}/include
+    ../components/xtensa/include
+    ../components/xtensa/${CONFIG_SOC}/include
     )
 
   zephyr_link_libraries(
     hal
-    -L${CMAKE_CURRENT_SOURCE_DIR}/../components/esp32
+    -L${CMAKE_CURRENT_SOURCE_DIR}/../components/xtensa/${CONFIG_SOC}
     )
 endif()
