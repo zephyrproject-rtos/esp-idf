@@ -19,7 +19,6 @@
 #include "soc/cpu.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
-#include "freertos/portmacro.h"
 #include "freertos/task.h"
 #include "freertos/portable.h"
 
@@ -118,6 +117,8 @@ void IRAM_ATTR _lock_close(_lock_t *lock) {
     portEXIT_CRITICAL(&lock_init_spinlock);
 }
 
+void _lock_close_recursive(_lock_t *lock) __attribute__((alias("_lock_close")));
+
 /* Acquire the mutex semaphore for lock. wait up to delay ticks.
    mutex_type is queueQUEUE_TYPE_RECURSIVE_MUTEX or queueQUEUE_TYPE_MUTEX
 */
@@ -135,7 +136,7 @@ static int IRAM_ATTR lock_acquire_generic(_lock_t *lock, uint32_t delay, uint8_t
     }
 
     BaseType_t success;
-    if (xPortInIsrContext()) {
+    if (!xPortCanYield()) {
         /* In ISR Context */
         if (mutex_type == queueQUEUE_TYPE_RECURSIVE_MUTEX) {
             abort(); /* recursive mutexes make no sense in ISR context */
@@ -189,7 +190,7 @@ static void IRAM_ATTR lock_release_generic(_lock_t *lock, uint8_t mutex_type) {
         return;
     }
 
-    if (xPortInIsrContext()) {
+    if (!xPortCanYield()) {
         if (mutex_type == queueQUEUE_TYPE_RECURSIVE_MUTEX) {
             abort(); /* indicates logic bug, it shouldn't be possible to lock recursively in ISR */
         }
@@ -213,4 +214,11 @@ void IRAM_ATTR _lock_release(_lock_t *lock) {
 
 void IRAM_ATTR _lock_release_recursive(_lock_t *lock) {
     lock_release_generic(lock, queueQUEUE_TYPE_RECURSIVE_MUTEX);
+}
+
+/* No-op function, used to force linking this file,
+   instead of the dummy locks implementation from newlib.
+ */
+void newlib_include_locks_impl(void)
+{
 }

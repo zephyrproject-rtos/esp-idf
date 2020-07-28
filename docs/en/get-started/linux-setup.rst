@@ -1,8 +1,8 @@
-﻿*************************************
+﻿*********************************************
 Standard Setup of Toolchain for Linux
-*************************************
-:link_to_translation:`zh_CN:[中文]`
+*********************************************
 
+:link_to_translation:`zh_CN:[中文]`
 
 Install Prerequisites
 =====================
@@ -11,91 +11,45 @@ To compile with ESP-IDF you need to get the following packages:
 
 - CentOS 7::
 
-    sudo yum install gcc git wget make ncurses-devel flex bison gperf python pyserial
+    sudo yum install git wget flex bison gperf python cmake ninja-build ccache dfu-util
 
 - Ubuntu and Debian::
 
-    sudo apt-get install gcc git wget make libncurses-dev flex bison gperf python python-serial
+    sudo apt-get install git wget flex bison gperf python python-pip python-setuptools cmake ninja-build ccache libffi-dev libssl-dev dfu-util
 
 - Arch::
 
-    sudo pacman -S --needed gcc git make ncurses flex bison gperf python2-pyserial
+    sudo pacman -S --needed gcc git make flex bison gperf python-pip cmake ninja ccache dfu-util
 
+.. note::
+    CMake version 3.5 or newer is required for use with ESP-IDF. Older Linux distributions may require updating, enabling of a "backports" repository, or installing of a "cmake3" package rather than "cmake".
 
-Toolchain Setup
+Additional Tips
 ===============
-
-ESP32 toolchain for Linux is available for download from Espressif website:
-
-- for 64-bit Linux:
-
-  https://dl.espressif.com/dl/xtensa-esp32-elf-linux64-1.22.0-80-g6c4433a-5.2.0.tar.gz
-
-- for 32-bit Linux:
-
-  https://dl.espressif.com/dl/xtensa-esp32-elf-linux32-1.22.0-80-g6c4433a-5.2.0.tar.gz
-
-1.  Download this file, then extract it in ``~/esp`` directory::
-
-        mkdir -p ~/esp
-        cd ~/esp
-        tar -xzf ~/Downloads/xtensa-esp32-elf-linux64-1.22.0-80-g6c4433a-5.2.0.tar.gz
-
-.. _setup-linux-toolchain-add-it-to-path:
-
-2.  The toolchain will be extracted into ``~/esp/xtensa-esp32-elf/`` directory.
-
-    To use it, you will need to update your ``PATH`` environment variable in ``~/.profile`` file. To make ``xtensa-esp32-elf`` available for all terminal sessions, add the following line to your ``~/.profile`` file::
-
-        export PATH="$PATH:$HOME/esp/xtensa-esp32-elf/bin"
-
-    Alternatively, you may create an alias for the above command. This way you can get the toolchain only when you need it. To do this, add different line to your ``~/.profile`` file::
-
-        alias get_esp32='export PATH="$PATH:$HOME/esp/xtensa-esp32-elf/bin"'
-
-    Then when you need the toolchain you can type ``get_esp32`` on the command line and the toolchain will be added to your ``PATH``.
-
-    .. note::
-
-        If you have ``/bin/bash`` set as login shell, and both ``.bash_profile`` and ``.profile`` exist, then update ``.bash_profile`` instead.
-
-3.  Log off and log in back to make the ``.profile`` changes effective. Run the following command to verify if ``PATH`` is correctly set::
-
-        printenv PATH
-
-    You are looking for similar result containing toolchain's path at the end of displayed string::
-
-        $ printenv PATH
-        /home/user-name/bin:/home/user-name/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/user-name/esp/xtensa-esp32-elf/bin
-
-    Instead of ``/home/user-name`` there should be a home path specific to your installation.
-
 
 Permission issues /dev/ttyUSB0
 ------------------------------
 
-With some Linux distributions you may get the ``Failed to open port /dev/ttyUSB0`` error message when flashing the ESP32. :ref:`This can be solved by adding the current user to the dialout group<linux-dialout-group>`.
+With some Linux distributions you may get the ``Failed to open port /dev/ttyUSB0`` error message when flashing the {IDF_TARGET_NAME}. :ref:`This can be solved by adding the current user to the dialout group<linux-dialout-group>`.
 
+Setting up Python 3 as default for Ubuntu and Debian
+----------------------------------------------------
 
-Arch Linux Users
-----------------
+Ubuntu and Debian are still providing Python 2.7 as the default interpreter but some required packages may be missing for newer distributions. Python 3 is recommended and can be installed as follows::
 
-To run the precompiled gdb (xtensa-esp32-elf-gdb) in Arch Linux requires ncurses 5, but Arch uses ncurses 6. 
+    sudo apt-get install python3 python3-pip python3-setuptools
 
-Backwards compatibility libraries are available in AUR_ for native and lib32 configurations:
+Making Python 3 the default interpreter is possible by running::
 
-- https://aur.archlinux.org/packages/ncurses5-compat-libs/
-- https://aur.archlinux.org/packages/lib32-ncurses5-compat-libs/
+    sudo update-alternatives --install /usr/bin/python python /usr/bin/python3 10
 
-Before installing these packages you might need to add the author's public key to your keyring as described in the "Comments" section at the links above.
-
-Alternatively, use crosstool-NG to compile a gdb that links against ncurses 6.
-
+.. note::
+    This is system-wide change which may affect all of the applications.
 
 Next Steps
 ==========
 
-To carry on with development environment setup, proceed to section :ref:`get-started-get-esp-idf`.
+To carry on with development environment setup, proceed to :ref:`get-started-get-esp-idf`.
 
 
 Related Documents
@@ -104,7 +58,7 @@ Related Documents
 .. toctree::
     :maxdepth: 1
 
-    linux-setup-scratch
+    :esp32: linux-setup-scratch
 
 
 .. _AUR: https://wiki.archlinux.org/index.php/Arch_User_Repository

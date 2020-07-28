@@ -8,8 +8,16 @@
 #include "freertos/xtensa_api.h"
 #include "unity.h"
 #include "soc/cpu.h"
+#include "test_utils.h"
 
 #include "driver/timer.h"
+#include "sdkconfig.h"
+
+#ifdef CONFIG_IDF_TARGET_ESP32S2
+#define int_clr_timers int_clr
+#define update update.update
+#define int_st_timers int_st
+#endif
 
 static SemaphoreHandle_t isr_semaphore;
 static volatile unsigned isr_count;
@@ -18,9 +26,8 @@ static volatile unsigned isr_count;
    mutex semaphore to wake up another counter task */
 static void timer_group0_isr(void *vp_arg)
 {
-    TIMERG0.int_clr_timers.t0 = 1;
-    TIMERG0.hw_timer[TIMER_0].update = 1;
-    TIMERG0.hw_timer[TIMER_0].config.alarm_en = 1;
+    timer_group_clr_intr_status_in_isr(TIMER_GROUP_0, TIMER_0);
+    timer_group_enable_alarm_in_isr(TIMER_GROUP_0, TIMER_0);
     portBASE_TYPE higher_awoken = pdFALSE;
     isr_count++;
     xSemaphoreGiveFromISR(isr_semaphore, &higher_awoken);
@@ -106,6 +113,7 @@ TEST_CASE("Scheduler disabled can handle a pending context switch on resume", "[
         // When we resume scheduler, we expect the counter task
         // will preempt and count at least one more item
         esp_intr_noniram_enable();
+        timer_enable_intr(TIMER_GROUP_0, TIMER_0);
         xTaskResumeAll();
 
         TEST_ASSERT_NOT_EQUAL(count_config.counter, no_sched_task);
@@ -193,6 +201,7 @@ TEST_CASE("Scheduler disabled can wake multiple tasks on resume", "[freertos]")
     }
 }
 
+#ifndef CONFIG_FREERTOS_UNICORE
 static volatile bool sched_suspended;
 static void suspend_scheduler_5ms_task_fn(void *ignore)
 {
@@ -206,7 +215,6 @@ static void suspend_scheduler_5ms_task_fn(void *ignore)
     vTaskDelete(NULL);
 }
 
-#ifndef CONFIG_FREERTOS_UNICORE
 /* If the scheduler is disabled on one CPU (A) with a task blocked on something, and a task
    on B (where scheduler is running) wakes it, then the task on A should be woken on resume.
 */

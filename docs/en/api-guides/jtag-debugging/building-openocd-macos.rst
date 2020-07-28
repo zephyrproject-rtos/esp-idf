@@ -1,15 +1,16 @@
 ***************************************
 Building OpenOCD from Sources for MacOS
 ***************************************
+:link_to_translation:`zh_CN:[中文]`
 
-The following instructions are alternative to downloading binary OpenOCD from Espressif website. To quickly setup the binary OpenOCD, instead of compiling it yourself, backup and proceed to section :doc:`setup-openocd-macos`.
+The following instructions are alternative to downloading binary OpenOCD from `Espressif GitHub <https://github.com/espressif/openocd-esp32/releases>`_. To quickly setup the binary OpenOCD, instead of compiling it yourself, backup and proceed to section :ref:`jtag-debugging-setup-openocd`.
 
 .. highlight:: bash
 
 Download Sources of OpenOCD
 ===========================
 
-The sources for the ESP32-enabled variant of OpenOCD are available from Espressif GitHub under https://github.com/espressif/openocd-esp32. To download the sources, use the following commands::
+The sources for the {IDF_TARGET_NAME}-enabled variant of OpenOCD are available from Espressif GitHub under https://github.com/espressif/openocd-esp32. To download the sources, use the following commands::
 
     cd ~/esp
     git clone --recursive https://github.com/espressif/openocd-esp32.git
@@ -22,7 +23,7 @@ Install Dependencies
 
 Install packages that are required to compile OpenOCD using Homebrew::
 
-	brew install automake libtool libusb wget gcc@4.9
+    brew install automake libtool libusb wget gcc@4.9 pkg-config
 
 Build OpenOCD
 =============
@@ -38,9 +39,9 @@ Optionally you can add ``sudo make install`` step at the end. Skip it, if you ha
 
 .. note::
 
-    * Should an error occur, resolve it and try again until the command ``make`` works. 
+    * Should an error occur, resolve it and try again until the command ``make`` works.
     * If there is a submodule problem from OpenOCD, please ``cd`` to the ``openocd-esp32`` directory and input ``git submodule update --init``.
-    * If the ``./configure`` is successfully run, information of enabled JTAG will be printed under ``OpenOCD configuration summary``. 
+    * If the ``./configure`` is successfully run, information of enabled JTAG will be printed under ``OpenOCD configuration summary``.
     * If the information of your device is not shown in the log, use ``./configure`` to enable it as described in  ``../openocd-esp32/doc/INSTALL.txt``.
     * For details concerning compiling OpenOCD, please refer to ``openocd-esp32/README.OSX``.
 
@@ -49,6 +50,5 @@ Once ``make`` process is successfully completed, the executable of OpenOCD will 
 Next Steps
 ==========
 
-To carry on with debugging environment setup, proceed to section :ref:`jtag-debugging-configuring-esp32-target`.
+To carry on with debugging environment setup, proceed to section :ref:`jtag-debugging-configuring-target`.
 
-    

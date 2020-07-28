@@ -1,7 +1,7 @@
 Deep Sleep Wake Stubs
 =====================
 
-ESP32 supports running a "deep sleep wake stub" when coming out of deep sleep. This function runs immediately as soon as the chip wakes up - before any normal initialisation, bootloader, or ESP-IDF code has run. After the wake stub runs, the SoC can go back to sleep or continue to start ESP-IDF normally.
+{IDF_TARGET_NAME} supports running a "deep sleep wake stub" when coming out of deep sleep. This function runs immediately as soon as the chip wakes up - before any normal initialisation, bootloader, or ESP-IDF code has run. After the wake stub runs, the SoC can go back to sleep or continue to start ESP-IDF normally.
 
 Deep sleep wake stub code is loaded into "RTC Fast Memory" and any data which it uses must also be loaded into RTC memory. RTC memory regions hold their contents during deep sleep.
 
@@ -33,7 +33,7 @@ It is not necessary to implement ``esp_wake_deep_sleep()`` in your app in order 
 
 If you want to swap between different deep sleep stubs at runtime, it is also possible to do this by calling the ``esp_set_deep_sleep_wake_stub()`` function. This is not necessary if you only use the default ``esp_wake_deep_sleep()`` function.
 
-All of these functions are declared in the ``esp_deepsleep.h`` header under components/esp32.
+All of these functions are declared in the ``esp_sleep.h`` header under components/{IDF_TARGET_PATH_NAME}.
 
 Loading Code Into RTC Memory
 ----------------------------
@@ -55,11 +55,11 @@ The first way is simpler for very short and simple code, or for source files whe
 Loading Data Into RTC Memory
 ----------------------------
 
-Data used by stub code must be resident in RTC Slow Memory. This memory is also used by the ULP.
+Data used by stub code must be resident in RTC memory. The data can be placed in RTC Fast memory or in RTC Slow memory which is also used by the ULP.
 
 Specifying this data can be done in one of two ways:
 
-The first way is to use the ``RTC_DATA_ATTR`` and ``RTC_RODATA_ATTR`` to specify any data (writeable or read-only, respectivley) which should be loaded into RTC slow memory::
+The first way is to use the ``RTC_DATA_ATTR`` and ``RTC_RODATA_ATTR`` to specify any data (writeable or read-only, respectively) which should be loaded into RTC memory::
 
     RTC_DATA_ATTR int wake_count;
 
@@ -68,6 +68,12 @@ The first way is to use the ``RTC_DATA_ATTR`` and ``RTC_RODATA_ATTR`` to specify
         static RTC_RODATA_ATTR const char fmt_str[] = "Wake count %d\n";
         ets_printf(fmt_str, wake_count++);
     }
+
+.. only:: esp32
+
+    The RTC memory area where this data will be placed can be configured via menuconfig option named ``CONFIG_ESP32_RTCDATA_IN_FAST_MEM``. This option allows to keep slow memory area for ULP programs and once it is enabled the data marked with ``RTC_DATA_ATTR`` and ``RTC_RODATA_ATTR`` are placed in the RTC fast memory segment otherwise it goes to RTC slow memory (default option). This option depends on the ``CONFIG_FREERTOS_UNICORE`` because RTC fast memory can be accessed only by PRO_CPU.
+
+The attributes ``RTC_FAST_ATTR`` and ``RTC_SLOW_ATTR`` can be used to specify data that will be force placed into RTC_FAST and RTC_SLOW memory respectively. Any access to data marked with ``RTC_FAST_ATTR`` is allowed by PRO_CPU only and it is responsibility of user to make sure about it.
 
 Unfortunately, any string constants used in this way must be declared as arrays and marked with RTC_RODATA_ATTR, as shown in the example above.
 
@@ -84,4 +90,4 @@ For example, the equivalent example in ``rtc_wake_stub_counter.c``::
 
 The second way is a better option if you need to use strings, or write other more complex code.
 
-
+To reduce wake-up time use the `CONFIG_BOOTLOADER_SKIP_VALIDATE_IN_DEEP_SLEEP` Kconfig option, see more information in :doc:`Fast boot from Deep Sleep <bootloader>`.

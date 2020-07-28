@@ -1,7 +1,7 @@
-ULP coprocessor instruction set
-===============================
+ESP32 ULP coprocessor instruction set
+=====================================
 
-This document provides details about the instructions used by ESP32 ULP coprocessor assembler.
+This document provides details about the instructions used by {IDF_TARGET_NAME} ULP coprocessor assembler.
 
 ULP coprocessor has 4 16-bit general purpose registers, labeled R0, R1, R2, R3. It also has an 8-bit counter register (stage_cnt) which can be used to implement loops. Stage count regiter is accessed using special instructions.
 
@@ -13,7 +13,7 @@ The instruction syntax is case insensitive. Upper and lower case letters can be 
 
 Note about addressing
 ---------------------
-ESP32 ULP coprocessor's JUMP, ST, LD instructions which take register as an argument (jump address, store/load base address) expect the argument to be expressed in 32-bit words.
+{IDF_TARGET_NAME} ULP coprocessor's JUMP, ST, LD instructions which take register as an argument (jump address, store/load base address) expect the argument to be expressed in 32-bit words.
 
 Consider the following example program::
 
@@ -73,7 +73,12 @@ ULP coprocessor is clocked from RTC_FAST_CLK, which is normally derived from the
     uint32_t rtc_8md256_period = rtc_clk_cal(RTC_CAL_8MD256, 100);
     uint32_t rtc_fast_freq_hz = 1000000ULL * (1 << RTC_CLK_CAL_FRACT) * 256 / rtc_8md256_period;
 
-ULP coprocessor needs 2 clock cycle to fetch each instuction (fetching is not pipelined), plus certain number of cycles to execute, depending on the instruction. See description of each instruction for details on the execution time.
+ULP coprocessor needs certain number of clock cycles to fetch each instuction, plus certain number of cycles to execute it, depending on the instruction. See description of each instruction below for details on the execution time.
+
+Instruction fetch time is:
+
+- 2 clock cycles — for instructions following ALU and branch instructions.
+- 4 clock cycles — in other cases.
 
 Note that when accessing RTC memories and RTC registers, ULP coprocessor has lower priority than the main CPUs. This means that ULP coprocessor execution may be suspended while the main CPUs access same memory region as the ULP.
 
@@ -86,7 +91,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
 **Operands**
   None
 **Cycles**
-  2 (fetch) + 1 (execute)
+  2 cycle to execute, 4 cycles to fetch next instruction
 **Description**
   No operation is performed. Only the PC is incremented.
 
@@ -111,7 +116,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
   - *Imm* - 16-bit signed value
 
 **Cycles**
-  2 (fetch) + 2 (execute)
+  2 cycles to execute, 4 cycles to fetch next instruction
 
 **Description**
   The instruction adds source register to another source register or to a 16-bit signed value and stores result to the destination register.
@@ -147,7 +152,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
   - *Imm*   - 16-bit signed value
 
 **Cycles**
-  2 (fetch) + 2 (execute)
+  2 cycles to execute, 4 cycles to fetch next instruction
 
 **Description**
   The instruction subtracts the source register from another source register or subtracts 16-bit signed value from a source register, and stores result to the destination register.
@@ -155,9 +160,9 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
 **Examples**::
 
   1:         SUB R1, R2, R3             //R1 = R2 - R3
-  
+
   2:         sub R1, R2, 0x1234         //R1 = R2 - 0x1234
-  
+
   3:         .set value1, 0x03          //constant value1=0x03
              SUB R1, R2, value1         //R1 = R2 - value1
   4:         .global label              //declaration of variable label
@@ -181,7 +186,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
   - *Imm* - 16-bit signed value
 
 **Cycles**
-  2 (fetch) + 2 (execute)
+  2 cycles to execute, 4 cycles to fetch next instruction
 
 **Description**
   The instruction does logical AND of a source register and another source register or 16-bit signed value and stores result to the destination register.
@@ -206,7 +211,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
 
 **Syntax**
   **OR** *Rdst, Rsrc1, Rsrc2*
- 
+
   **OR** *Rdst, Rsrc1, imm*
 
 **Operands**
@@ -216,13 +221,13 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
   - *Imm* - 16-bit signed value
 
 **Cycles**
-  2 (fetch) + 2 (execute)
- 
+  2 cycles to execute, 4 cycles to fetch next instruction
+
 **Description**
   The instruction does logical OR of a source register and another source register or 16-bit signed value and stores result to the destination register.
 
 **Examples**::
- 
+
   1:       OR R1, R2, R3           //R1 = R2 \| R3
 
   2:       OR R1, R2, 0x1234       //R1 = R2 \| 0x1234
@@ -250,9 +255,9 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
   - *Rsrc1* - Register R[0..3]
   - *Rsrc2* - Register R[0..3]
   - *Imm* - 16-bit signed value
- 
+
 **Cycles**
-  2 (fetch) + 2 (execute)
+  2 cycles to execute, 4 cycles to fetch next instruction
 
 **Description**
    The instruction does logical shift to left of source register to number of bits from another source register or 16-bit signed value and store result to the destination register.
@@ -287,7 +292,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
   *Imm* - 16-bit signed value
 
 **Cycles**
-  2 (fetch) + 2 (execute)
+  2 cycles to execute, 4 cycles to fetch next instruction
 
 **Description**
   The instruction does logical shift to right of source register to number of bits from another source register or 16-bit signed value and store result to the destination register.
@@ -321,7 +326,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
   - *Imm*  – 16-bit signed value
 
 **Cycles**
-  2 (fetch) + 2 (execute)
+  2 cycles to execute, 4 cycles to fetch next instruction
 
 **Description**
    The instruction move to destination register value from source register or 16-bit signed value.
@@ -331,9 +336,9 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
 
 **Examples**::
 
-  1:        MOVE       R1, R2            //R1 = R2 >> R3
+  1:        MOVE       R1, R2            //R1 = R2
 
-  2:        MOVE       R1, 0x03          //R1 = R2 >> 0x03
+  2:        MOVE       R1, 0x03          //R1 = 0x03
 
   3:        .set       value1, 0x03      //constant value1=0x03
             MOVE       R1, value1        //R1 = value1
@@ -356,7 +361,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
   - *Offset* – 10-bit signed value, offset in bytes
 
 **Cycles**
-  2 (fetch) + 4 (execute)
+  4 cycles to execute, 4 cycles to fetch next instruction
 
 **Description**
   The instruction stores the 16-bit value of Rsrc to the lower half-word of memory with address Rdst+offset. The upper half-word is written with the current program counter (PC), expressed in words, shifted left by 5 bits::
@@ -368,7 +373,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
 **Examples**::
 
   1:        ST  R1, R2, 0x12        //MEM[R2+0x12] = R1
-  
+
   2:        .data                   //Data section definition
     Addr1:  .word     123           // Define label Addr1 16 bit
             .set      offs, 0x00    // Define constant offs
@@ -387,13 +392,13 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
 
 **Operands**
    *Rdst*  – Register R[0..3], destination
-   
+
    *Rsrc* – Register R[0..3], holds address of destination, in 32-bit words
-   
+
    *Offset* – 10-bit signed value, offset in bytes
 
 **Cycles**
-  2 (fetch) + 4 (execute)
+  4 cycles to execute, 4 cycles to fetch next instruction
 
 **Description**
    The instruction loads lower 16-bit half-word from memory with address Rsrc+offset into the destination register Rdst::
@@ -439,7 +444,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
      - OV – jump if last ALU has set overflow flag
 
 **Cycles**
-  2 (fetch) + 2 (execute)
+  2 cycles to execute, 2 cycles to fetch next instruction
 
 **Description**
   The instruction makes jump to the specified address. Jump can be either unconditional or based on an ALU flag.
@@ -473,12 +478,35 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
    - *Step*          – relative shift from current position, in bytes
    - *Threshold*     – threshold value for branch condition
    - *Condition*:
-      - *GE* (greater or equal) – jump if value in R0 >= threshold 
-
+      - *EQ* (equal) – jump if value in R0 == threshold
       - *LT* (less than) – jump if value in R0 < threshold
+      - *LE* (less or equal) – jump if value in R0 <= threshold
+      - *GT* (greater than) – jump if value in R0 > threshold
+      - *GE* (greater or equal) – jump if value in R0 >= threshold
+
 
 **Cycles**
-  2 (fetch) + 2 (execute)
+  Conditions *LT*, *GE*, *LE* and *GT*: 2 cycles to execute, 2 cycles to fetch next instruction
+
+  Conditions *LE* and *GT* are implemented in the assembler using one **JUMPR** instructions::
+
+    // JUMPR target, threshold, GT is implemented as:
+
+             JUMPR target, threshold+1, GE
+
+    // JUMPR target, threshold, LE is implemented as:
+    
+             JUMPR target, threshold + 1, LT
+
+  Conditions *EQ* is implemented in the assembler using two **JUMPR** instructions::
+
+    // JUMPR target, threshold, EQ is implemented as:
+    
+             JUMPR next, threshold + 1, GE
+             JUMPR target, threshold, GE
+    next:
+
+  Therefore the execution time will depend on the branches taken: either 2 cycles to execute + 2 cycles to fetch, or 4 cycles to execute + 4 cycles to fetch.
 
 **Description**
    The instruction makes a jump to a relative address if condition is true. Condition is the result of comparison of R0 register value and the threshold value.
@@ -507,10 +535,29 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
    - *Condition*:
        - *EQ* (equal) – jump if value in stage_cnt == threshold
        - *LT* (less than) –  jump if value in stage_cnt < threshold
+       - *LE* (less or equal) - jump if value in stage_cnt <= threshold
        - *GT* (greater than) –  jump if value in stage_cnt > threshold
+       - *GE* (greater or equal) — jump if value in stage_cnt >= threshold
 
 **Cycles**
-  2 (fetch) + 2 (execute)
+  Conditions *LE*, *LT*, *GE*: 2 cycles to execute, 2 cycles to fetch next instruction
+
+  Conditions *EQ*, *GT* are implemented in the assembler using two **JUMPS** instructions::
+
+    // JUMPS target, threshold, EQ is implemented as:
+
+             JUMPS next, threshold, LT
+             JUMPS target, threshold, LE
+    next:
+
+    // JUMPS target, threshold, GT is implemented as:
+
+             JUMPS next, threshold, LE
+             JUMPS target, threshold, GE
+    next:
+
+  Therefore the execution time will depend on the branches taken: either 2 cycles to execute + 2 cycles to fetch, or 4 cycles to execute + 4 cycles to fetch.
+
 
 **Description**
     The instruction makes a jump to a relative address if condition is true. Condition is the result of comparison of count register value and threshold value.
@@ -539,7 +586,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
    The instruction sets the stage count register to 0
 
 **Cycles**
-  2 (fetch) + 2 (execute)
+  2 cycles to execute, 4 cycles to fetch next instruction
 
 **Examples**::
 
@@ -557,7 +604,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
    - *Value* – 8 bits value
 
 **Cycles**
-  2 (fetch) + 2 (execute)
+  2 cycles to execute, 4 cycles to fetch next instruction
 
 **Description**
    The instruction increments stage count register by given value.
@@ -583,7 +630,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
    - *Value* – 8 bits value
 
 **Cycles**
-  2 (fetch) + 2 (execute)
+  2 cycles to execute, 4 cycles to fetch next instruction
 
 **Description**
    The instruction decrements stage count register by given value.
@@ -610,7 +657,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
   No operands
 
 **Cycles**
-  2 (fetch) + 2 (execute)
+  2 cycles to execute
 
 **Description**
    The instruction halts the ULP coprocessor and restarts ULP wakeup timer, if it is enabled.
@@ -631,7 +678,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
   No operands
 
 **Cycles**
-  2 (fetch) + 2 (execute)
+  2 cycles to execute, 4 cycles to fetch next instruction
 
 **Description**
   The instruction sends an interrupt from ULP to RTC controller.
@@ -666,7 +713,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
    - *sleep_reg* – 0..4, selects one of ``SENS_ULP_CP_SLEEP_CYCx_REG`` registers.
 
 **Cycles**
-  2 (fetch) + 2 (execute)
+  2 cycles to execute, 4 cycles to fetch next instruction
 
 **Description**
    The instruction selects which of the ``SENS_ULP_CP_SLEEP_CYCx_REG`` (x = 0..4) register values is to be used by the ULP wakeup timer as wakeup period. By default, the value from ``SENS_ULP_CP_SLEEP_CYC0_REG`` is used.
@@ -689,7 +736,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
    - *Cycles* – number of cycles for wait
 
 **Cycles**
-  2 (fetch) + *Cycles* (execute)
+  2 + *Cycles* cycles to execute, 4 cycles to fetch next instruction
 
 **Description**
    The instruction delays for given number of cycles.
@@ -715,7 +762,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
   - *Wait_Delay* – number of cycles used to perform the measurement
 
 **Cycles**
-  2 (fetch) + *Wait_Delay* + 3 * TSENS_CLK
+  2 + *Wait_Delay* + 3 * TSENS_CLK to execute, 4 cycles to fetch next instruction
 
 **Description**
    The instruction performs measurement using TSENS and stores the result into a general purpose register.
@@ -742,7 +789,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
   - *Mux*  -  selected PAD, SARADC Pad[Mux+1] is enabled
 
 **Cycles**
-  2 (fetch) + 21 + max(1, SAR_AMP_WAIT1) + max(1, SAR_AMP_WAIT2) + max(1, SAR_AMP_WAIT3) + SARx_SAMPLE_CYCLE + SARx_SAMPLE_BIT
+  ``23 + max(1, SAR_AMP_WAIT1) + max(1, SAR_AMP_WAIT2) + max(1, SAR_AMP_WAIT3) + SARx_SAMPLE_CYCLE + SARx_SAMPLE_BIT`` cycles to execute, 4 cycles to fetch next instruction
 
 **Description**
   The instruction makes measurements from ADC.
@@ -763,7 +810,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
   - *Slave_sel*  -  Index of I2C slave address to use.
 
 **Cycles**
-  2 (fetch) + I2C communication time
+  Execution time mostly depends on I2C communication time. 4 cycles to fetch next instruction.
 
 **Description**
   ``I2C_RD`` instruction reads one byte from I2C slave with index ``Slave_sel``. Slave address (in 7-bit format) has to be set in advance into `SENS_I2C_SLAVE_ADDRx` register field, where ``x == Slave_sel``.
@@ -787,7 +834,7 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
   - *Slave_sel*  -  Index of I2C slave address to use.
 
 **Cycles**
-  2 (fetch) + I2C communication time
+  Execution time mostly depends on I2C communication time. 4 cycles to fetch next instruction.
 
 **Description**
   ``I2C_WR`` instruction writes one byte to I2C slave with index ``Slave_sel``. Slave address (in 7-bit format) has to be set in advance into `SENS_I2C_SLAVE_ADDRx` register field, where ``x == Slave_sel``.
@@ -804,24 +851,23 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
    **REG_RD**   *Addr, High, Low*
 
 **Operands**
-  - *Addr* – register address, in 32-bit words
-  - *High* – High part of R0
-  - *Low* – Low part of R0
+  - *Addr* – Register address, in 32-bit words
+  - *High* – Register end bit number
+  - *Low* – Register start bit number
 
 **Cycles**
-  2 (fetch) + 6 (execute)
+  4 cycles to execute, 4 cycles to fetch next instruction
 
 **Description**
-   The instruction reads up to 16 bits from a peripheral register into a general purpose register: ``R0 = REG[Addr][High:Low]``.
+  The instruction reads up to 16 bits from a peripheral register into a general purpose register: ``R0 = REG[Addr][High:Low]``.
 
-   This instruction can access registers in RTC_CNTL, RTC_IO, SENS, and RTC_I2C peripherals. Address of the the register, as seen from the ULP,
-   can be calculated from the address of the same register on the DPORT bus as follows::
+  This instruction can access registers in RTC_CNTL, RTC_IO, SENS, and RTC_I2C peripherals. Address of the the register, as seen from the ULP, can be calculated from the address of the same register on the DPORT bus as follows::
 
     addr_ulp = (addr_dport - DR_REG_RTCCNTL_BASE) / 4
 
 **Examples**::
 
-  1:        REG_RD      0x120, 2, 0     // load 4 bits: R0 = {12'b0, REG[0x120][7:4]}
+  1:        REG_RD      0x120, 7, 4     // load 4 bits: R0 = {12'b0, REG[0x120][7:4]}
 
 
 **REG_WR** – write to peripheral register
@@ -831,19 +877,18 @@ Note that when accessing RTC memories and RTC registers, ULP coprocessor has low
   **REG_WR**   *Addr, High, Low, Data*
 
 **Operands**
-  - *Addr* – register address, in 32-bit words.
-  - *High* – High part of R0
-  - *Low* – Low part of R0
-  - *Data* – value to write, 8 bits
+  - *Addr* – Register address, in 32-bit words.
+  - *High* – Register end bit number
+  - *Low* – Register start bit number
+  - *Data* – Value to write, 8 bits
 
 **Cycles**
-  2 (fetch) + 10 (execute)
+  8 cycles to execute, 4 cycles to fetch next instruction
 
 **Description**
-   The instruction writes up to 8 bits from a general purpose register into a peripheral register. ``REG[Addr][High:Low] = data``
+  The instruction writes up to 8 bits from an immediate data value into a peripheral register: ``REG[Addr][High:Low] = data``.
 
-   This instruction can access registers in RTC_CNTL, RTC_IO, SENS, and RTC_I2C peripherals. Address of the the register, as seen from the ULP,
-   can be calculated from the address of the same register on the DPORT bus as follows::
+  This instruction can access registers in RTC_CNTL, RTC_IO, SENS, and RTC_I2C peripherals. Address of the the register, as seen from the ULP, can be calculated from the address of the same register on the DPORT bus as follows::
 
     addr_ulp = (addr_dport - DR_REG_RTCCNTL_BASE) / 4
 

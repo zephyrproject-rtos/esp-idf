@@ -1,23 +1,9 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
-# Build all examples from the examples directory, out of tree to
+# Build all examples from the examples directory, in BUILD_PATH to
 # ensure they can run when copied to a new directory.
 #
 # Runs as part of CI process.
-#
-# Assumes PWD is an out-of-tree build directory, and will copy examples
-# to individual subdirectories, one by one.
-#
-#
-# Without arguments it just builds all examples
-#
-# With one argument <JOB_NAME> it builds part of the examples. This is a useful for
-#   parallel execution in CI.
-#   <JOB_NAME> must look like this:
-#               <some_text_label>_<num>
-#   It scans .gitlab-ci.yaml to count number of jobs which have name "<some_text_label>_<num>"
-#   It scans the filesystem to count all examples
-#   Based on this, it decides to run qa set of examples.
 #
 
 # -----------------------------------------------------------------------------
@@ -30,10 +16,8 @@ fi
 
 set -o errexit # Exit if command failed.
 set -o pipefail # Exit if pipe failed.
-set -o nounset # Exit if variable not set.
 
-# Remove the initial space and instead use '\n'.
-IFS=$'\n\t'
+export PATH="$IDF_PATH/tools/ci:$IDF_PATH/tools:$PATH"
 
 # -----------------------------------------------------------------------------
 
@@ -44,127 +28,80 @@ die() {
 
 [ -z ${IDF_PATH} ] && die "IDF_PATH is not set"
 [ -z ${LOG_PATH} ] && die "LOG_PATH is not set"
+[ -z ${BUILD_PATH} ] && die "BUILD_PATH is not set"
+[ -z ${IDF_TARGET} ] && die "IDF_TARGET is not set"
+[ -z ${EXAMPLE_TEST_BUILD_SYSTEM} ] && die "EXAMPLE_TEST_BUILD_SYSTEM is not set"
 [ -d ${LOG_PATH} ] || mkdir -p ${LOG_PATH}
+[ -d ${BUILD_PATH} ] || mkdir -p ${BUILD_PATH}
 
-echo "build_examples running in ${PWD}"
-
-# only 0 or 1 arguments
-[ $# -le 1 ] || die "Have to run as $(basename $0) [<JOB_NAME>]"
-
-export BATCH_BUILD=1
-export V=0 # only build verbose if there's an error
-
-shopt -s lastpipe # Workaround for Bash to use variables in loops (http://mywiki.wooledge.org/BashFAQ/024)
-
-RESULT=0
-FAILED_EXAMPLES=""
-RESULT_ISSUES=22  # magic number result code for issues found
-LOG_SUSPECTED=${LOG_PATH}/common_log.txt
-touch ${LOG_SUSPECTED}
-
-if [ $# -eq 0 ]
-then
-    START_NUM=0
-    END_NUM=999
-else
-    JOB_NAME=$1
-
-    # parse text prefix at the beginning of string 'some_your_text_NUM'
-    # (will be 'some_your_text' without last '_')
-    JOB_PATTERN=$( echo ${JOB_NAME} | sed -n -r 's/^(.*)_[0-9]+$/\1/p' )
-    [ -z ${JOB_PATTERN} ] && die "JOB_PATTERN is bad"
-
-    # parse number 'NUM' at the end of string 'some_your_text_NUM'
-    JOB_NUM=$( echo ${JOB_NAME} | sed -n -r 's/^.*_([0-9]+)$/\1/p' )
-    [ -z ${JOB_NUM} ] && die "JOB_NUM is bad"
-
-    # count number of the jobs
-    NUM_OF_JOBS=$( grep -c -E "^${JOB_PATTERN}_[0-9]+:$" "${IDF_PATH}/.gitlab-ci.yml" )
-    [ -z ${NUM_OF_JOBS} ] && die "NUM_OF_JOBS is bad"
-
-    # count number of examples
-    NUM_OF_EXAMPLES=$( find ${IDF_PATH}/examples/ -type f -name Makefile | wc -l )
-    [ -z ${NUM_OF_EXAMPLES} ] && die "NUM_OF_EXAMPLES is bad"
-
-    # separate intervals
-    #57 / 5 == 12
-    NUM_OF_EX_PER_JOB=$(( (${NUM_OF_EXAMPLES} + ${NUM_OF_JOBS} - 1) / ${NUM_OF_JOBS} ))
-    [ -z ${NUM_OF_EX_PER_JOB} ] && die "NUM_OF_EX_PER_JOB is bad"
-
-    # ex.: [0; 12); [12; 24); [24; 36); [36; 48); [48; 60)
-    START_NUM=$(( ${JOB_NUM} * ${NUM_OF_EX_PER_JOB} ))
-    [ -z ${START_NUM} ] && die "START_NUM is bad"
-
-    END_NUM=$(( (${JOB_NUM} + 1) * ${NUM_OF_EX_PER_JOB} ))
-    [ -z ${END_NUM} ] && die "END_NUM is bad"
+if [ -z ${CI_NODE_TOTAL} ]; then
+    CI_NODE_TOTAL=1
+    echo "Assuming CI_NODE_TOTAL=${CI_NODE_TOTAL}"
+fi
+if [ -z ${CI_NODE_INDEX} ]; then
+    # Gitlab uses a 1-based index
+    CI_NODE_INDEX=1
+    echo "Assuming CI_NODE_INDEX=${CI_NODE_INDEX}"
 fi
 
-build_example () {
-    local ID=$1
-    shift
-    local MAKE_FILE=$1
-    shift
 
-    local EXAMPLE_DIR=$(dirname "${MAKE_FILE}")
-    local EXAMPLE_NAME=$(basename "${EXAMPLE_DIR}")
+export EXTRA_CFLAGS="${PEDANTIC_CFLAGS:-}"
+export EXTRA_CXXFLAGS="${PEDANTIC_CXXFLAGS:-}"
 
-    echo "Building ${EXAMPLE_NAME} as ${ID}..."
-    mkdir -p "example_builds/${ID}"
-    cp -r "${EXAMPLE_DIR}" "example_builds/${ID}"
-    pushd "example_builds/${ID}/${EXAMPLE_NAME}"
-        # be stricter in the CI build than the default IDF settings
-        export EXTRA_CFLAGS="-Werror -Werror=deprecated-declarations"
-        export EXTRA_CXXFLAGS=${EXTRA_CFLAGS}
+set -o nounset # Exit if variable not set.
 
-        # build non-verbose first
-        local BUILDLOG=${LOG_PATH}/ex_${ID}_log.txt
-        touch ${BUILDLOG}
+export REALPATH=realpath
+if [ "$(uname -s)" = "Darwin" ]; then
+    export REALPATH=grealpath
+fi
 
-        make clean >>${BUILDLOG} 2>&1 &&
-        make defconfig >>${BUILDLOG} 2>&1 &&
-        make all >>${BUILDLOG} 2>&1 &&
-        ( make print_flash_cmd | tail -n 1 >build/download.config ) >>${BUILDLOG} 2>&1 ||
-        {
-            RESULT=$?; FAILED_EXAMPLES+=" ${EXAMPLE_NAME}" ;
-        }
+# Convert LOG_PATH and BUILD_PATH to relative, to make the json file less verbose.
+LOG_PATH=$(${REALPATH} --relative-to ${IDF_PATH} ${LOG_PATH})
+BUILD_PATH=$(${REALPATH} --relative-to ${IDF_PATH} ${BUILD_PATH})
 
-        cat ${BUILDLOG}
-    popd
+ALL_BUILD_LIST_JSON="${BUILD_PATH}/list.json"
+JOB_BUILD_LIST_JSON="${BUILD_PATH}/list_job_${CI_NODE_INDEX}.json"
 
-    grep -i "error\|warning" "${BUILDLOG}" 2>&1 >> "${LOG_SUSPECTED}" || :
-}
+echo "build_examples running for target $IDF_TARGET"
 
-EXAMPLE_NUM=0
+cd ${IDF_PATH}
 
-find ${IDF_PATH}/examples/ -type f -name Makefile | sort | \
-while read FN
-do
-    if [[ $EXAMPLE_NUM -lt $START_NUM || $EXAMPLE_NUM -ge $END_NUM ]]
-    then
-        EXAMPLE_NUM=$(( $EXAMPLE_NUM + 1 ))
-        continue
-    fi
-    echo ">>> example [ ${EXAMPLE_NUM} ] - $FN"
+# This part of the script produces the same result for all the example build jobs. It may be moved to a separate stage
+# (pre-build) later, then the build jobs will receive ${BUILD_LIST_JSON} file as an artifact.
 
-    build_example "${EXAMPLE_NUM}" "${FN}"
+# If changing the work-dir or build-dir format, remember to update the "artifacts" in gitlab-ci configs, and IDFApp.py.
 
-    EXAMPLE_NUM=$(( $EXAMPLE_NUM + 1 ))
-done
+${IDF_PATH}/tools/find_apps.py examples \
+    -vv \
+    --format json \
+    --build-system ${EXAMPLE_TEST_BUILD_SYSTEM} \
+    --target ${IDF_TARGET} \
+    --recursive \
+    --exclude examples/build_system/idf_as_lib \
+    --work-dir "${BUILD_PATH}/@f/@w/@t" \
+    --build-dir build \
+    --build-log "${LOG_PATH}/@f_@w.txt" \
+    --output ${ALL_BUILD_LIST_JSON} \
+    --config 'sdkconfig.ci=default' \
+    --config 'sdkconfig.ci.*=' \
+    --config '=default' \
 
-# show warnings
-echo -e "\nFound issues:"
+# --config rules above explained:
+# 1. If sdkconfig.ci exists, use it build the example with configuration name "default"
+# 2. If sdkconfig.ci.* exists, use it to build the "*" configuration
+# 3. If none of the above exist, build the default configuration under the name "default"
 
-#       Ignore the next messages:
-# "error.o" or "-Werror" in compiler's command line
-# "reassigning to symbol" or "changes choice state" in sdkconfig
-sort -u "${LOG_SUSPECTED}" | \
-grep -v "library/error.o\|\ -Werror\|reassigning to symbol\|changes choice state" \
-    && RESULT=$RESULT_ISSUES \
-    || echo -e "\tNone"
+# The part below is where the actual builds happen
 
-[ -z ${FAILED_EXAMPLES} ] || echo -e "\nThere are errors in the next examples: $FAILED_EXAMPLES"
-[ $RESULT -eq 0 ] || echo -e "\nFix all warnings and errors above to pass the test!"
+${IDF_PATH}/tools/build_apps.py \
+    -vv \
+    --format json \
+    --keep-going \
+    --parallel-count ${CI_NODE_TOTAL} \
+    --parallel-index ${CI_NODE_INDEX} \
+    --output-build-list ${JOB_BUILD_LIST_JSON} \
+    ${ALL_BUILD_LIST_JSON}\
 
-echo -e "\nReturn code = $RESULT"
 
-exit $RESULT
+# Check for build warnings
+${IDF_PATH}/tools/ci/check_build_warnings.py -vv ${JOB_BUILD_LIST_JSON}

@@ -1,13 +1,14 @@
 Configure WROVER JTAG Interface
 ===============================
+:link_to_translation:`zh_CN:[中文]`
 
-All versions of ESP32 WROVER KIT boards have JTAG functionality build in. Putting it to work requires setting  jumpers to enable JTAG functionality, setting SPI flash voltage and configuring USB drivers. Please refer to step by step instructions below.
+All versions of ESP-WROVER-KIT boards have built-in JTAG functionality. Putting it to work requires setting jumpers to enable JTAG functionality, setting SPI flash voltage and configuring USB drivers. Please refer to step by step instructions below.
 
 
 Configure Hardware
 ^^^^^^^^^^^^^^^^^^
 
-1.  Enable on-board JTAG functionality by setting JP8 according to :doc:`../../get-started/get-started-wrover-kit`, section :ref:`get-started-esp-wrover-kit-setup-options`. 
+1.  Enable on-board JTAG functionality by setting JP8 according to :doc:`../../hw-reference/esp32/get-started-wrover-kit`, Section :ref:`get-started-esp-wrover-kit-v4.1-setup-options`.
 
 2.  Verify if ESP32 pins used for JTAG communication are not connected to some other h/w that may disturb JTAG operation:
 
@@ -29,19 +30,19 @@ Configure Hardware
 Configure USB Drivers
 ^^^^^^^^^^^^^^^^^^^^^
 
-Install and configure USB drivers, so OpenOCD is able to communicate with JTAG interface on ESP32 WROVER KIT board as well as with UART interface used to upload application for flash. Follow steps below specific to your operating system.
+Install and configure USB drivers, so OpenOCD is able to communicate with JTAG interface on ESP-WROVER-KIT board as well as with UART interface used to upload application for flash. Follow steps below specific to your operating system.
 
-.. note:: ESP32 WROVER KIT uses an FT2232 adapter. The following instructions can also be used for other FT2232 based JTAG adapters.
+.. note:: ESP-WROVER-KIT uses an FT2232 adapter. The following instructions can also be used for other FT2232 based JTAG adapters.
 
 
 Windows
 """""""
 
-1.  Using standard USB A / micro USB B cable connect ESP32 WROVER KIT to the computer. Switch the WROVER KIT on.
+1.  Using standard USB A / micro USB B cable connect ESP-WROVER-KIT to the computer. Switch the WROVER KIT on.
 
-2.  Wait until USB ports of WROVER KIT are recognized by Windows and drives are installed. If they do not install automatically, then then download them from http://www.ftdichip.com/Drivers/D2XX.htm and install manually.
+2.  Wait until USB ports of WROVER KIT are recognized by Windows and drives are installed. If they do not install automatically, then download them from https://www.ftdichip.com/Drivers/D2XX.htm and install manually.
 
-3.  Download Zadig tool (Zadig_X.X.exe) from http://zadig.akeo.ie/ and run it.
+3.  Download Zadig tool (Zadig_X.X.exe) from https://zadig.akeo.ie/ and run it.
 
 4.  In Zadig tool go to "Options" and check "List All Devices".
 
@@ -60,13 +61,13 @@ Windows
 
     Do not change the second device "Dual RS232-HS (Interface 1)". It is routed to ESP32's serial port (UART) used for upload of application to ESP32's flash.
 
-Now ESP32 WROVER KIT's JTAG interface should be available to the OpenOCD. To carry on with debugging environment setup, proceed to section :ref:`jtag-debugging-run-openocd`.
+Now ESP-WROVER-KIT's JTAG interface should be available to the OpenOCD. To carry on with debugging environment setup, proceed to section :ref:`jtag-debugging-run-openocd`.
 
 
 Linux
 """""
 
-1.  Using standard USB A / micro USB B cable connect ESP32 WROVER KIT board to the computer. Power on the board.
+1.  Using standard USB A / micro USB B cable connect ESP-WROVER-KIT board to the computer. Power on the board.
 
 .. highlight:: none
 
@@ -79,7 +80,7 @@ Linux
         crw-rw---- 1 root dialout 188, 1 Jul 10 19:04 /dev/ttyUSB1
 
 
-3.  Following section "Permissions delegation" in OpenOCD's README, set up the access permissions to both USB ports.
+3.  Following section "Permissions delegation" in `OpenOCD's README <https://sourceforge.net/p/openocd/code/ci/master/tree/README>`_, set up the access permissions to both USB ports.
 
 4.  Log off and login, then cycle the power to the board to make the changes effective. In terminal enter again ``ls -l /dev/ttyUSB*`` command to verify, if group-owner has changed from ``dialout`` to ``plugdev``:
 
@@ -93,22 +94,22 @@ Linux
 
     The ``/dev/ttyUSBn`` interface with lower number is used for JTAG communication. The other interface is routed to ESP32's serial port (UART) used for upload of application to ESP32's flash.
 
-Now ESP32 WROVER KIT's JTAG interface should be available to the OpenOCD. To carry on with debugging environment setup, proceed to section :ref:`jtag-debugging-run-openocd`.
+Now ESP-WROVER-KIT's JTAG interface should be available to the OpenOCD. To carry on with debugging environment setup, proceed to section :ref:`jtag-debugging-run-openocd`.
 
 
 MacOS
 """""
 
-On macOS, using FT2232 for JTAG and serial port at the same time needs some additional steps. When the OS loads FTDI serial port driver, it does so for both channels of FT2232 chip. However only one of these channels is used as a serial port, while the other is used as JTAG. If the OS has loaded FTDI serial port driver for the channel used for JTAG, OpenOCD will not be able to connect to to the chip. There are two ways around this:
+On macOS, using FT2232 for JTAG and serial port at the same time needs some additional steps. When the OS loads FTDI serial port driver, it does so for both channels of FT2232 chip. However only one of these channels is used as a serial port, while the other is used as JTAG. If the OS has loaded FTDI serial port driver for the channel used for JTAG, OpenOCD will not be able to connect to the chip. There are two ways around this:
 
 1. Manually unload the FTDI serial port driver before starting OpenOCD, start OpenOCD, then load the serial port driver.
 
-2. Modify FTDI driver configuration so that it doesn't load itself for channel B of FT2232 chip, which is the channel used for JTAG on WROVER KIT. 
+2. Modify FTDI driver configuration so that it doesn't load itself for channel B of FT2232 chip, which is the channel used for JTAG on WROVER KIT.
 
 Manually unloading the driver
 .............................
 
-1. Install FTDI driver from http://www.ftdichip.com/Drivers/VCP.htm
+1. Install FTDI driver from https://www.ftdichip.com/Drivers/VCP.htm
 
 2. Connect USB cable to the WROVER KIT.
 
@@ -120,20 +121,17 @@ Manually unloading the driver
 
     sudo kextunload -b com.apple.driver.AppleUSBFTDI
 
-4. Run OpenOCD (paths are given for downloadable OpenOCD archive)::
+4. Run OpenOCD::
 
-    bin/openocd -s share/openocd/scripts -f interface/ftdi/esp32_devkitj_v1.cfg -f board/esp-wroom-32.cfg
-
-   Or, if OpenOCD was built from source::
-
-    src/openocd -s tcl -f interface/ftdi/esp32_devkitj_v1.cfg -f board/esp-wroom-32.cfg
+    bin/openocd -f board/esp32-wrover-kit-3.3v.cfg
 
 5. In another terminal window, load FTDI serial port driver again::
 
     sudo kextload -b com.FTDI.driver.FTDIUSBSerialDriver
 
+.. note::
 
-Note that if you need to restart OpenOCD, there is no need to unload FTDI driver again — just stop OpenOCD and start it again. The driver only needs to be unloaded if WROVER KIT was reconnected or power was toggled.
+   If you need to restart OpenOCD, there is no need to unload FTDI driver again — just stop OpenOCD and start it again. The driver only needs to be unloaded if WROVER KIT was reconnected or power was toggled.
 
 This procedure can be wrapped into a shell script, if desired.
 
@@ -192,4 +190,3 @@ In a nutshell, this approach requires modification to FTDI driver configuration 
 After these steps, serial port and JTAG can be used at the same time.
 
 To carry on with debugging environment setup, proceed to section :ref:`jtag-debugging-run-openocd`.
-

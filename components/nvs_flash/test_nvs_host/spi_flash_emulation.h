@@ -36,6 +36,7 @@ public:
     SpiFlashEmulator(size_t sectorCount) : mUpperSectorBound(sectorCount)
     {
         mData.resize(sectorCount * SPI_FLASH_SEC_SIZE / 4, 0xffffffff);
+        mEraseCnt.resize(sectorCount);
         spi_flash_emulator_set(this);
     }
 
@@ -43,7 +44,8 @@ public:
     {
         load(filename);
         // Atleast one page should be free, hence we create mData of size of 2 sectors.
-        mData.resize(2 * SPI_FLASH_SEC_SIZE / 4, 0xffffffff);
+        mData.resize(mData.size() + SPI_FLASH_SEC_SIZE / 4, 0xffffffff);
+        mUpperSectorBound = mData.size() * 4 / SPI_FLASH_SEC_SIZE;
         spi_flash_emulator_set(this);
     }
 
@@ -123,6 +125,7 @@ public:
         std::fill_n(begin(mData) + offset, SPI_FLASH_SEC_SIZE / 4, 0xffffffff);
 
         ++mEraseOps;
+        mEraseCnt[sectorNumber]++;
         mTotalTime += getEraseOpTime();
         return true;
     }
@@ -216,6 +219,10 @@ public:
         mFailCountdown = count;
     }
 
+    size_t getSectorEraseCount(uint32_t sector) const {
+        return mEraseCnt[sector];
+    }
+
 protected:
     static size_t getReadOpTime(uint32_t bytes);
     static size_t getWriteOpTime(uint32_t bytes);
@@ -223,6 +230,7 @@ protected:
 
 
     std::vector<uint32_t> mData;
+    std::vector<uint32_t> mEraseCnt;
 
     mutable size_t mReadOps = 0;
     mutable size_t mWriteOps = 0;

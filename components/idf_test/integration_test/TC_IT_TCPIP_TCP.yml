@@ -11,16 +11,16 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1>
+  - - SOC SOC1 LISTEN <random_port>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP -i 0.0.0.0 -p 0
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - P SSC1 RE CONNECT:\d+,OK
       - P SOC1 C +ACCEPT
   - - SSC SSC1 soc -B -t TCP -i 0.0.0.0 -p 0
     - - R SSC1 A <sock2>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock2> -i 123.456.678.789 -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock2> -i 123.456.678.789 -p <random_port>
     - - P SSC1 RE CONNECT:\d+,ERROR
   - - SSC SSC1 soc -C -s <sock2> -i <pc_ip> -p <test_tcp_port2>
     - - P SSC1 RE CONNECT:\d+,ERROR
@@ -36,15 +36,15 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1.PC上建立TCP 监听 test_tcp_port1
+    1.PC上建立TCP 监听 random_port
     2.target1上创建TCP socket，bind到本地ip 0.0.0.0,本地端口 0
-    3.target1上使用步骤2创建的socket，去连接 PC的ip，test_tcp_port1
+    3.target1上使用步骤2创建的socket，去连接 PC的ip，random_port
     4.target1上创建TCP socket，bind到本地ip 0.0.0.0,本地端口 0
-    5.target1上使用步骤4创建的socket,去连接不存在的ip，test_tcp_port1
+    5.target1上使用步骤4创建的socket,去连接不存在的ip，random_port
     6.target1上使用步骤2创建的socket，去连接 PC的ip，远端端口不存在。
   sub module: TCP
   summary: STA mode, connect test. use different ip, port
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) with different parameter
   version: v1 (2016-8-15)
@@ -86,7 +86,7 @@ test cases:
     4.PC tcp 连接到不存在的port ,<target_ip>
   sub module: TCP
   summary: STA mode, server listen test. use different kinds of port
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) with different parameter
   version: v1 (2016-8-15)
@@ -102,11 +102,11 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1>
+  - - SOC SOC1 LISTEN <random_port>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SOC SOC1 ACCEPT SOC2
     - - R SOC_COM L OK
@@ -133,14 +133,14 @@ test cases:
   steps: |
     1. PC上建立TCP 监听 test_tcp_port1
     2.target1上创建TCP socket
-    3.target1上使用步骤2创建的socket，去连接PC的ip，test_tcp_port1
+    3.target1上使用步骤2创建的socket，去连接 PC的ip，test_tcp_port1
     4.PC与target1 创建好TCP 连接，有ACCEPT
     5.PC send 5 bytes to 8266
     6.8266 send 5 bytes to PC
     7.8266 send 1460 to PC.
   sub module: TCP
   summary: STA mode, send/recv basic test
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) with different parameter
   version: v1 (2016-8-15)
@@ -156,23 +156,23 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1>
+  - - SOC SOC1 LISTEN <random_port>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -D -s <sock1> -h B
     - - R SSC1 RE SHUTDOWN:\d+,OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock2>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -D -s <sock2> -h W
     - - R SSC1 RE SHUTDOWN:\d+,OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock3>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock3> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock3> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -D -s <sock3> -h R
     - - R SSC1 RE SHUTDOWN:\d+,OK
@@ -192,19 +192,19 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1. PC上建立TCP 监听 test_tcp_port1
+    1. PC上建立TCP 监听 random_port
     2.target1上创建TCP socket
-    3.target1上使用步骤2创建的socket，去连接 PC的ip，test_tcp_port1,PC有ACCEPT
+    3.target1上使用步骤2创建的socket，去连接 PC的ip，random_port,PC有ACCEPT
     4.target1 shutdown socket1 B
     5.target1上创建TCP socket
-    6.target1上使用步骤5创建的socket，去连接 PC的ip，test_tcp_port1,PC有ACCEPT
+    6.target1上使用步骤5创建的socket，去连接 PC的ip，random_port,PC有ACCEPT
     7.target1 shutdown socket2 W
     8.target1上创建TCP socket
-    9.target1上使用步骤8创建的socket，去连接 PC的ip，test_tcp_port1,PC有ACCEPT
+    9.target1上使用步骤8创建的socket，去连接 PC的ip，random_port,PC有ACCEPT
     10.target1 shutdown socket3 R
   sub module: TCP
   summary: STA mode, shutdown basic test
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) with different parameter
   version: v1 (2016-8-15)
@@ -220,7 +220,7 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1>
+  - - SOC SOC1 LISTEN <random_port>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
@@ -238,13 +238,13 @@ test cases:
     - - R SSC1 RE CLOSE:\d+,OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -T -s <sock1>
     - - R SSC1 RE CLOSE:\d+,OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -D -s <sock1>
     - - R SSC1 RE SHUTDOWN:\d+,OK
@@ -270,15 +270,15 @@ test cases:
   initial condition: STAM2
   level: Integration
   module: TCPIP
-  steps: "1.PC上建立TCP 监听 test_tcp_port1\n2.target1上创建TCP socket1\n3.target1关闭socket1\n4.target1上创建TCP
+  steps: "1.PC上建立TCP 监听 random_port\n2.target1上创建TCP socket1\n3.target1关闭socket1\n4.target1上创建TCP
     socket 端口随机\n5.target1上使用步骤4创建的socket1，去监听\n6.PC CONNECT<random_port>,<target_ip>
     ,tcp 连接创建成功，创建socket2             \n7.target1关闭socket1\n8.target1关闭socket2\n9.target1上创建TCP
-    socket1\n10.target1上使用步骤10创建的socket1，去连接 PC的ip，test_tcp_port1,PC有ACCEPT\n11.target1关闭socket1\n12.target1上创建TCP
-    socket1\n13.target1上使用步骤13创建的socket1，去连接 PC的ip，test_tcp_port1,PC有ACCEPT\n14.target1shutdown
+    socket1\n10.target1上使用步骤10创建的socket1，去连接 PC的ip，random_port,PC有ACCEPT\n11.target1关闭socket1\n12.target1上创建TCP
+    socket1\n13.target1上使用步骤13创建的socket1，去连接 PC的ip，random_port,PC有ACCEPT\n14.target1shutdown
     socket1\n15.target1关闭socket1"
   sub module: TCP
   summary: STA mode, close for different types of TCP sockets test
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) with different parameter
   version: v1 (2016-8-15)
@@ -294,27 +294,27 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1>
+  - - SOC SOC1 LISTEN <random_port>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock2>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock3>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock3> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock3> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock4>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock4> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock4> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock5>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock5> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock5> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   execution time: 0.0
   expected result: |-
@@ -333,20 +333,20 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1.PC上建立TCP 监听 test_tcp_port1
+    1.PC上建立TCP 监听 random_port
     2.target1上创建TCP socket1
-    3.target1上使用步骤2创建的socket1，去连接 PC的ip，test_tcp_port1,PC有ACCEPT
+    3.target1上使用步骤2创建的socket1，去连接 PC的ip，random_port,PC有ACCEPT
     4.target1上创建TCP socket2
-    5.target1上使用步骤4创建的socket2，去连接 PC的ip，test_tcp_port1,PC有ACCEPT
+    5.target1上使用步骤4创建的socket2，去连接 PC的ip，random_port,PC有ACCEPT
     6.target1上创建TCP socket3
-    7.target1上使用步骤6创建的socket3，去连接 PC的ip，test_tcp_port1,PC有ACCEPT
+    7.target1上使用步骤6创建的socket3，去连接 PC的ip，random_port,PC有ACCEPT
     8.target1上创建TCP socket4
-    9.target1上使用步骤8创建的socket4，去连接 PC的ip，test_tcp_port1,PC有ACCEPT
+    9.target1上使用步骤8创建的socket4，去连接 PC的ip，random_port,PC有ACCEPT
     10.target1上创建TCP socket5
-    11.target1上使用步骤10创建的socket5，去连接 PC的ip，test_tcp_port1,PC有ACCEPT
+    11.target1上使用步骤10创建的socket5，去连接 PC的ip，random_port,PC有ACCEPT
   sub module: TCP
   summary: STA mode, create max TCP sockets test
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) with different parameter
   version: v1 (2016-8-15)
@@ -395,7 +395,7 @@ test cases:
     \   "
   sub module: TCP
   summary: STA mode, accept max TCP client by server test
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) with different parameter
   version: v1 (2016-8-15)
@@ -459,7 +459,7 @@ test cases:
     11.target1 abort socket1
   sub module: TCP
   summary: STA mode, espconn abort test
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) with different parameter
   version: v1 (2016-8-15)
@@ -475,16 +475,16 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1> <pc_ip_wifi>
+  - - SOC SOC1 LISTEN <random_port> <pc_ip_wifi>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP -i 0.0.0.0 -p 0
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip_wifi> -p <random_port>
     - - P SSC1 RE CONNECT:\d+,OK
       - P SOC1 C +ACCEPT
   - - SSC SSC1 soc -B -t TCP -i 0.0.0.0 -p 0
     - - R SSC1 A <sock2>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock2> -i 123.456.678.789 -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock2> -i 123.456.678.789 -p <random_port>
     - - P SSC1 RE CONNECT:\d+,ERROR
   - - SSC SSC1 soc -C -s <sock2> -i <pc_ip_wifi> -p <test_tcp_port2>
     - - P SSC1 RE CONNECT:\d+,ERROR
@@ -500,15 +500,15 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1.PC上建立TCP 监听 test_tcp_port1
+    1.PC上建立TCP 监听 random_port
     2.target1上创建TCP socket，bind到本地ip 0.0.0.0,本地端口 0
-    3.target1上使用步骤2创建的socket，去连接 PC的ip，test_tcp_port1
+    3.target1上使用步骤2创建的socket，去连接 PC的ip，random_port
     4.target1上创建TCP socket，bind到本地ip 0.0.0.0,本地端口 0
-    5.target1上使用步骤4创建的socket,去连接不存在的ip，test_tcp_port1
+    5.target1上使用步骤4创建的socket,去连接不存在的ip，random_port
     6.target1上使用步骤2创建的socket，去连接 PC的ip，远端端口不存在。
   sub module: TCP
   summary: AP mode, connect test. use different ip, port
-  test environment: SSC_T1_1
+  test environment: SSC_T1_7
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) with different parameter
   version: v1 (2016-8-15)
@@ -550,7 +550,7 @@ test cases:
     4.PC tcp 连接到不存在的port ,<target_ip>
   sub module: TCP
   summary: AP mode, server listen test. use different kinds of port
-  test environment: SSC_T1_1
+  test environment: SSC_T1_7
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) with different parameter
   version: v1 (2016-8-15)
@@ -566,11 +566,11 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1> <pc_ip_wifi>
+  - - SOC SOC1 LISTEN <random_port> <pc_ip_wifi>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip_wifi> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SOC SOC1 ACCEPT SOC2
     - - R SOC_COM L OK
@@ -595,7 +595,7 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |
-    1. PC上建立TCP 监听 test_tcp_port1
+    1.PC上建立TCP 监听 test_tcp_port1
     2.target1上创建TCP socket
     3.target1上使用步骤2创建的socket，去连接PC的ip，test_tcp_port1
     4.PC与target1 创建好TCP 连接，有ACCEPT
@@ -604,7 +604,7 @@ test cases:
     7.8266 send 100 * 1460 to PC.
   sub module: TCP
   summary: AP mode, send/recv basic test
-  test environment: SSC_T1_1
+  test environment: SSC_T1_7
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) with different parameter
   version: v1 (2016-8-15)
@@ -620,23 +620,23 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1> <pc_ip_wifi>
+  - - SOC SOC1 LISTEN <random_port> <pc_ip_wifi>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip_wifi> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -D -s <sock1> -h B
     - - R SSC1 RE SHUTDOWN:\d+,OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock2>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip_wifi> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -D -s <sock2> -h W
     - - R SSC1 RE SHUTDOWN:\d+,OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock3>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock3> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock3> -i <pc_ip_wifi> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -D -s <sock3> -h R
     - - R SSC1 RE SHUTDOWN:\d+,OK
@@ -656,19 +656,19 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1. PC上建立TCP 监听 test_tcp_port1
+    1. PC上建立TCP 监听 random_port
     2.target1上创建TCP socket
-    3.target1上使用步骤2创建的socket，去连接 PC的ip，test_tcp_port1,PC有ACCEPT
+    3.target1上使用步骤2创建的socket，去连接 PC的ip，random_port,PC有ACCEPT
     4.target1 shutdown socket1 B
     5.target1上创建TCP socket
-    6.target1上使用步骤5创建的socket，去连接 PC的ip，test_tcp_port1,PC有ACCEPT
+    6.target1上使用步骤5创建的socket，去连接 PC的ip，random_port,PC有ACCEPT
     7.target1 shutdown socket2 W
     8.target1上创建TCP socket
-    9.target1上使用步骤8创建的socket，去连接 PC的ip，test_tcp_port1,PC有ACCEPT
+    9.target1上使用步骤8创建的socket，去连接 PC的ip，random_port,PC有ACCEPT
     10.target1 shutdown socket3 R
   sub module: TCP
   summary: AP mode, shutdown basic test
-  test environment: SSC_T1_1
+  test environment: SSC_T1_7
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) with different parameter
   version: v1 (2016-8-15)
@@ -684,7 +684,7 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1> <pc_ip_wifi>
+  - - SOC SOC1 LISTEN <random_port> <pc_ip_wifi>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
@@ -702,13 +702,13 @@ test cases:
     - - R SSC1 RE CLOSE:\d+,OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip_wifi> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -T -s <sock1>
     - - R SSC1 RE CLOSE:\d+,OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip_wifi> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -D -s <sock1>
     - - R SSC1 RE SHUTDOWN:\d+,OK
@@ -734,15 +734,15 @@ test cases:
   initial condition: APM2
   level: Integration
   module: TCPIP
-  steps: "1.PC上建立TCP 监听 test_tcp_port1\n2.target1上创建TCP socket1\n3.target1关闭socket1\n4.target1上创建TCP
+  steps: "1.PC上建立TCP 监听 random_port\n2.target1上创建TCP socket1\n3.target1关闭socket1\n4.target1上创建TCP
     socket 端口随机\n5.target1上使用步骤4创建的socket1，去监听\n6.PC CONNECT<random_port>,<target_ip>
     ,tcp 连接创建成功，创建socket2             \n7.target1关闭socket1\n8.target1关闭socket2\n9.target1上创建TCP
-    socket1\n10.target1上使用步骤10创建的socket1，去连接 PC的ip，test_tcp_port1,PC有ACCEPT\n11.target1关闭socket1\n12.target1上创建TCP
-    socket1\n13.target1上使用步骤13创建的socket1，去连接 PC的ip，test_tcp_port1,PC有ACCEPT\n14.target1shutdown
+    socket1\n10.target1上使用步骤10创建的socket1，去连接 PC的ip，random_port,PC有ACCEPT\n11.target1关闭socket1\n12.target1上创建TCP
+    socket1\n13.target1上使用步骤13创建的socket1，去连接 PC的ip，random_port,PC有ACCEPT\n14.target1shutdown
     socket1\n15.target1关闭socket1"
   sub module: TCP
   summary: AP mode, close for different types of TCP sockets test
-  test environment: SSC_T1_1
+  test environment: SSC_T1_7
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) with different parameter
   version: v1 (2016-8-15)
@@ -758,27 +758,27 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1> <pc_ip_wifi>
+  - - SOC SOC1 LISTEN <random_port> <pc_ip_wifi>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip_wifi> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock2>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip_wifi> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock3>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock3> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock3> -i <pc_ip_wifi> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock4>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock4> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock4> -i <pc_ip_wifi> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock5>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock5> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock5> -i <pc_ip_wifi> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   execution time: 0.0
   expected result: |-
@@ -797,20 +797,20 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1.PC上建立TCP 监听 test_tcp_port1
+    1.PC上建立TCP 监听 random_port
     2.target1上创建TCP socket1
-    3.target1上使用步骤2创建的socket1，去连接 PC的ip，test_tcp_port1,PC有ACCEPT
+    3.target1上使用步骤2创建的socket1，去连接 PC的ip，random_port,PC有ACCEPT
     4.target1上创建TCP socket2
-    5.target1上使用步骤4创建的socket2，去连接 PC的ip，test_tcp_port1,PC有ACCEPT
+    5.target1上使用步骤4创建的socket2，去连接 PC的ip，random_port,PC有ACCEPT
     6.target1上创建TCP socket3
-    7.target1上使用步骤6创建的socket3，去连接 PC的ip，test_tcp_port1,PC有ACCEPT
+    7.target1上使用步骤6创建的socket3，去连接 PC的ip，random_port,PC有ACCEPT
     8.target1上创建TCP socket4
-    9.target1上使用步骤8创建的socket4，去连接 PC的ip，test_tcp_port1,PC有ACCEPT
+    9.target1上使用步骤8创建的socket4，去连接 PC的ip，random_port,PC有ACCEPT
     10.target1上创建TCP socket5
-    11.target1上使用步骤10创建的socket5，去连接 PC的ip，test_tcp_port1,PC有ACCEPT
+    11.target1上使用步骤10创建的socket5，去连接 PC的ip，random_port,PC有ACCEPT
   sub module: TCP
   summary: AP mode, create max TCP sockets test
-  test environment: SSC_T1_1
+  test environment: SSC_T1_7
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) with different parameter
   version: v1 (2016-8-15)
@@ -859,7 +859,7 @@ test cases:
     \   "
   sub module: TCP
   summary: AP mode, accept max TCP client by server test
-  test environment: SSC_T1_1
+  test environment: SSC_T1_7
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) with different parameter
   version: v1 (2016-8-15)
@@ -875,29 +875,29 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1>
+  - - SOC SOC1 LISTEN <random_port>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t UDP -i 0.0.0.0 -p <test_udp_port1>
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - P SSC1 RE CONNECT:\d+,ERROR
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock2>:BIND:(\d+),OK
   - - SSC SSC1 soc -L -s <sock2>
     - - R SSC1 RE LISTEN:\d+,OK
-  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip> -p <random_port>
     - - P SSC1 RE CONNECT:\d+,ERROR
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock3>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock3> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock3> -i <pc_ip> -p <random_port>
     - - P SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -D -s <sock3> -h B
     - - P SSC1 RE SHUTDOWN:\d+,OK
-  - - SSC SSC1 soc -C -s <sock3> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock3> -i <pc_ip> -p <random_port>
     - - P SSC1 RE CONNECT:\d+,ERROR
   - - SSC SSC1 soc -T
     - - R SSC1 C +CLOSEALL
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - P SSC1 RE CONNECT:\d+,ERROR
   execution time: 0.0
   expected result: |-
@@ -917,21 +917,21 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1.PC上建立TCP 监听 test_tcp_port1
+    1.PC上建立TCP 监听 random_port
     2.target1上创建UDP传输socket，bind到本地ip 0.0.0.0,<test_udp_port1>
-    3.target1上使用步骤2创建的socket，去连接 PC的ip，<test_udp_port1>
+    3.target1上使用步骤2创建的socket，去连接 PC的ip，<random_port>
     4.target1上创建TCP socket
     5.target1上使用步骤4创建的socket,创建TCP 监听
-    6.target1上使用步骤4创建的socket，去连接 PC的ip，<test_tcp_port1>
+    6.target1上使用步骤4创建的socket，去连接 PC的ip，<random_port>
     7.target1上创建TCP socket
-    8.target1上使用步骤7创建的socket，去连接 PC的ip，<test_tcp_port1>
+    8.target1上使用步骤7创建的socket，去连接 PC的ip，<random_port>
     9.target1上关闭步骤7创建的socket
-    10.target1上使用步骤7创建的socket，去连接 PC的ip，<test_tcp_port1>
+    10.target1上使用步骤7创建的socket，去连接 PC的ip，<random_port>
     11.target1上关闭所有创建的socket
-    12.target1上使用步骤2创建的socket，去连接 PC的ip，<test_tcp_port1>
+    12.target1上使用步骤2创建的socket，去连接 PC的ip，<random_port>
   sub module: TCP
   summary: STA mode, connect test. use socket in state that can't connect
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) in different state
   version: v1 (2016-8-15)
@@ -947,7 +947,7 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1>
+  - - SOC SOC1 LISTEN <random_port>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t UDP -p <test_udp_port1>
     - - R SSC1 A <sock1>:BIND:(\d+),OK
@@ -955,7 +955,7 @@ test cases:
     - - R SSC1 RE LISTEN:\d+,ERROR
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock2>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -L -s <sock2>
     - - R SSC1 RE LISTEN:\d+,ERROR
@@ -980,18 +980,18 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1.PC上建立TCP 监听 test_tcp_port1
+    1.PC上建立TCP 监听 random_port
     2.target1上创建UDP传输socket，bind到本地ip 0.0.0.0,<test_udp_port1>
     3.target1上使用步骤2创建的socket，去建立TCP 监听
     4.target1上创建TCP socket
-    5.target1上使用步骤4创建的socket，去连接 PC的ip，<test_tcp_port1>
+    5.target1上使用步骤4创建的socket，去连接 PC的ip，<random_port>
     6.target1上使用步骤4创建的socket,创建TCP 监听
     7.target1上shutdown 步骤4的socket
     8.target1上使用步骤4创建的socket,创建TCP 监听
     9.target1上使用不存在socket,创建TCP 监听
   sub module: TCP
   summary: STA mode, server listen test. use socket in state that can't listen
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) in different state
   version: v1 (2016-8-15)
@@ -1007,7 +1007,7 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1>
+  - - SOC SOC1 LISTEN <random_port>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t UDP -p <test_udp_port1>
     - - R SSC1 A <sock1>:BIND:(\d+),OK
@@ -1017,7 +1017,7 @@ test cases:
     - - R SSC1 A <sock2>:BIND:(\d+),OK
   - - SSC SSC1 soc -S -s <sock2>
     - - R SSC1 RE SEND:\d+,ERROR
-  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -D -s <sock2>
     - - R SSC1 RE SHUTDOWN:\d+,OK
@@ -1040,7 +1040,7 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1.PC上建立TCP 监听 test_tcp_port1
+    1.PC上建立TCP 监听 random_port
     2.target1上创建UDP传输socket1，<test_udp_port1>
     3.target1上使用步骤2创建的socket1，去发送数据
     4.target1上创建TCP socket2
@@ -1051,7 +1051,7 @@ test cases:
     9.target1上不指定socket往上发送数据
   sub module: TCP
   summary: send test. use socket in state that can't send
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) in different state
   version: v1 (2016-8-15)
@@ -1067,11 +1067,11 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1>
+  - - SOC SOC1 LISTEN <random_port>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP -w 0
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SOC SOC1 ACCEPT SOC2
     - - R SOC_COM L OK
@@ -1093,16 +1093,16 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1. PC上建立TCP 监听 test_tcp_port1
+    1. PC上建立TCP 监听 random_port
     2.target1上创建TCP socket
-    3.target1上使用步骤2创建的socket，去连接 PC的ip，test_tcp_port1
+    3.target1上使用步骤2创建的socket，去连接 PC的ip，random_port
     4.PC与target1 创建好TCP 连接，有ACCEPT
     5.target上不进行recv
     6.PC send 100 * 1460 data to target,
     7.在target上开始recv
   sub module: TCP
-  summary: STA mode, recv buffer test
-  test environment: SSC_T1_1
+  summary: STA mode, TCP recv buffer test
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) in different state
   version: v2 (2016-10-19)
@@ -1118,15 +1118,15 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1>
+  - - SOC SOC1 LISTEN <random_port>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP -i <target_ip>
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -B -t TCP -i <target_ip>
     - - R SSC1 A <sock2>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -D -s <sock2>
     - - R SSC1 RE SHUTDOWN:\d+,OK
@@ -1137,8 +1137,7 @@ test cases:
   - - SOC SOC2 CONNECT <random_port> <target_ip>
     - - R SSC1 A <sock4>:ACCEPT:(\d+),\d+,.+,\d+
   - - SSC SSC1 soc -I
-    - - P SSC1 RE "SOCINFO:%%s,2,%%s,\d+,%%s,%%d"%%(<sock1>,<target_ip>,<pc_ip>,<test_tcp_port1>)
-      - P SSC1 RE "SOCINFO:%%s,2,.+,\d+,.+,\d+"%%(<sock2>)
+    - - P SSC1 RE "SOCINFO:%%s,2,%%s,\d+,%%s,%%d"%%(<sock1>,<target_ip>,<pc_ip>,<random_port>)
       - P SSC1 RE "SOCINFO:%%s,82,.+,%%d"%%(<sock3>,<random_port>)
       - P SSC1 RE "SOCINFO:%%s,2,%%s,%%d,%%s,\d+"%%(<sock4>,<target_ip>,<random_port>,<pc_ip>)
   execution time: 0.0
@@ -1152,22 +1151,22 @@ test cases:
     7.OK
     8.OK
     9.PC OK, target1 +ACCEPT:3,2,<pc_ip>,port
-    10.+SOCINFO:<sock1>,<target_ip>,<pc_ip>,<test_tcp_port1>
-    +SOCINFO:<sock2>,<target_ip>,<pc_ip>,<test_tcp_port1>
+    10.+SOCINFO:<sock1>,<target_ip>,<pc_ip>,<random_port>
+    +SOCINFO:<sock2>,<target_ip>,<pc_ip>,<random_port>
     +SOCINFO:<sock3>,<random_port>
     +SOCINFO:<sock4>,<target_ip>,<random_port>,<pc_ip>
     +SOCINF0ALL
   initial condition: STAM2
   level: Integration
   module: TCPIP
-  steps: "1.PC上建立TCP 监听 test_tcp_port1\n2.target1上创建TCP socket1,本地ip target_ip\n3.target1上使用步骤2创建的socket1，去连接
-    PC的ip，test_tcp_port1,PC有ACCEPT\n4.target1上创建TCP socket2,本地ip target_ip\n5.target1上使用步骤4创建的socket2，去连接
-    PC的ip，test_tcp_port1,PC有ACCEPT\n6.target1 shutdown socket2 \n7.target1上创建TCP socket3,本地端口random_port\n8.target1上使用步骤7创建的socket3，去监听\n9.PC
+  steps: "1.PC上建立TCP 监听 random_port\n2.target1上创建TCP socket1,本地ip target_ip\n3.target1上使用步骤2创建的socket1，去连接
+    PC的ip，random_port,PC有ACCEPT\n4.target1上创建TCP socket2,本地ip target_ip\n5.target1上使用步骤4创建的socket2，去连接
+    PC的ip，random_port,PC有ACCEPT\n6.target1 shutdown socket2 \n7.target1上创建TCP socket3,本地端口random_port\n8.target1上使用步骤7创建的socket3，去监听\n9.PC
     CONNECT<random_port>,<target_ip> ,tcp 连接创建成功，创建socket4  \n10.target1 查询the socket
     information"
   sub module: TCP
-  summary: STA mode, get active socket info test
-  test environment: SSC_T1_1
+  summary: STA mode, TCP get active socket info test
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) in different state
   version: v1 (2016-8-15)
@@ -1183,29 +1182,29 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1> <pc_ip_wifi>
+  - - SOC SOC1 LISTEN <random_port> <pc_ip_wifi>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t UDP -i 0.0.0.0 -p <test_udp_port1>
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip_wifi> -p <random_port>
     - - P SSC1 RE CONNECT:\d+,ERROR
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock2>:BIND:(\d+),OK
   - - SSC SSC1 soc -L -s <sock2>
     - - R SSC1 RE LISTEN:\d+,OK
-  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip_wifi> -p <random_port>
     - - P SSC1 RE CONNECT:\d+,ERROR
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock3>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock3> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock3> -i <pc_ip_wifi> -p <random_port>
     - - P SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -D -s <sock3> -h B
     - - P SSC1 RE SHUTDOWN:\d+,OK
-  - - SSC SSC1 soc -C -s <sock3> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock3> -i <pc_ip_wifi> -p <random_port>
     - - P SSC1 RE CONNECT:\d+,ERROR
   - - SSC SSC1 soc -T
     - - R SSC1 C +CLOSEALL
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip_wifi> -p <random_port>
     - - P SSC1 RE CONNECT:\d+,ERROR
   execution time: 0.0
   expected result: |-
@@ -1225,21 +1224,21 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1.PC上建立TCP 监听 test_tcp_port1
+    1.PC上建立TCP 监听 random_port
     2.target1上创建UDP传输socket，bind到本地ip 0.0.0.0,<test_udp_port1>
-    3.target1上使用步骤2创建的socket，去连接 PC的ip，<test_udp_port1>
+    3.target1上使用步骤2创建的socket，去连接 PC的ip，<random_port>
     4.target1上创建TCP socket
     5.target1上使用步骤4创建的socket,创建TCP 监听
-    6.target1上使用步骤4创建的socket，去连接 PC的ip，<test_tcp_port1>
+    6.target1上使用步骤4创建的socket，去连接 PC的ip，<random_port>
     7.target1上创建TCP socket
-    8.target1上使用步骤7创建的socket，去连接 PC的ip，<test_tcp_port1>
+    8.target1上使用步骤7创建的socket，去连接 PC的ip，<random_port>
     9.target1上关闭步骤7创建的socket
-    10.target1上使用步骤7创建的socket，去连接 PC的ip，<test_tcp_port1>
+    10.target1上使用步骤7创建的socket，去连接 PC的ip，<random_port>
     11.target1上关闭所有创建的socket
-    12.target1上使用步骤2创建的socket，去连接 PC的ip，<test_tcp_port1>
+    12.target1上使用步骤2创建的socket，去连接 PC的ip，<random_port>
   sub module: TCP
   summary: AP mode, connect test. use socket in state that can't connect
-  test environment: SSC_T1_1
+  test environment: SSC_T1_7
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) in different state
   version: v1 (2016-8-15)
@@ -1255,7 +1254,7 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1> <pc_ip_wifi>
+  - - SOC SOC1 LISTEN <random_port> <pc_ip_wifi>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t UDP -p <test_udp_port1>
     - - R SSC1 A <sock1>:BIND:(\d+),OK
@@ -1263,7 +1262,7 @@ test cases:
     - - R SSC1 RE LISTEN:\d+,ERROR
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock2>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip_wifi> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -L -s <sock2>
     - - R SSC1 RE LISTEN:\d+,ERROR
@@ -1288,18 +1287,18 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1.PC上建立TCP 监听 test_tcp_port1
+    1.PC上建立TCP 监听 random_port
     2.target1上创建UDP传输socket，bind到本地ip 0.0.0.0,<test_udp_port1>
     3.target1上使用步骤2创建的socket，去建立TCP 监听
     4.target1上创建TCP socket
-    5.target1上使用步骤4创建的socket，去连接 PC的ip，<test_tcp_port1>
+    5.target1上使用步骤4创建的socket，去连接 PC的ip，<random_port>
     6.target1上使用步骤4创建的socket,创建TCP 监听
     7.target1上shutdown 步骤4的socket
     8.target1上使用步骤4创建的socket,创建TCP 监听
     9.target1上使用不存在socket,创建TCP 监听
   sub module: TCP
   summary: AP mode, server listen test. use socket in state that can't listen
-  test environment: SSC_T1_1
+  test environment: SSC_T1_7
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) in different state
   version: v1 (2016-8-15)
@@ -1315,11 +1314,11 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1> <pc_ip_wifi>
+  - - SOC SOC1 LISTEN <random_port> <pc_ip_wifi>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP -w 0
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip_wifi> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SOC SOC1 ACCEPT SOC2
     - - R SOC_COM L OK
@@ -1340,16 +1339,16 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1. PC上建立TCP 监听 test_tcp_port1
+    1. PC上建立TCP 监听 random_port
     2.target1上创建TCP socket
-    3.target1上使用步骤2创建的socket，去连接 PC的ip，test_tcp_port1
+    3.target1上使用步骤2创建的socket，去连接 PC的ip，random_port
     4.PC与target1 创建好TCP 连接，有ACCEPT
     5.target停止调用recv
     6.PC send 100 * 1460 data to 8266,
     7.target重新调用recv
   sub module: TCP
-  summary: AP mode, recv buffer test
-  test environment: SSC_T1_1
+  summary: AP mode, TCP recv buffer test
+  test environment: SSC_T1_7
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) in different state
   version: v2 (2016-10-19)
@@ -1365,15 +1364,15 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1> <pc_ip_wifi>
+  - - SOC SOC1 LISTEN <random_port> <pc_ip_wifi>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP -i <target_ap_ip>
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip_wifi> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -B -t TCP -i <target_ap_ip>
     - - R SSC1 A <sock2>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip_wifi> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock2> -i <pc_ip_wifi> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -D -s <sock2>
     - - R SSC1 RE SHUTDOWN:\d+,OK
@@ -1384,8 +1383,7 @@ test cases:
   - - SOC SOC2 CONNECT <random_port> <target_ap_ip> 0 <pc_ip_wifi>
     - - R SSC1 A <sock4>:ACCEPT:(\d+),\d+,.+,\d+
   - - SSC SSC1 soc -I
-    - - P SSC1 RE "SOCINFO:%%s,2,%%s,\d+,%%s,%%d"%%(<sock1>,<target_ap_ip>,<pc_ip_wifi>,<test_tcp_port1>)
-      - P SSC1 RE "SOCINFO:%%s,2,.+,\d+,.+,\d+"%%(<sock2>)
+    - - P SSC1 RE "SOCINFO:%%s,2,%%s,\d+,%%s,%%d"%%(<sock1>,<target_ap_ip>,<pc_ip_wifi>,<random_port>)
       - P SSC1 RE "SOCINFO:%%s,82,.+,%%d"%%(<sock3>,<random_port>)
       - P SSC1 RE "SOCINFO:%%s,2,%%s,%%d,%%s,\d+"%%(<sock4>,<target_ap_ip>,<random_port>,<pc_ip_wifi>)
   execution time: 0.0
@@ -1399,22 +1397,22 @@ test cases:
     7.OK
     8.OK
     9.PC OK, target1 +ACCEPT:3,2,<pc_ip>,port
-    10.+SOCINFO:<sock1>,<target_ip>,<pc_ip>,<test_tcp_port1>
-    +SOCINFO:<sock2>,<target_ip>,<pc_ip>,<test_tcp_port1>
+    10.+SOCINFO:<sock1>,<target_ip>,<pc_ip>,<random_port>
+    +SOCINFO:<sock2>,<target_ip>,<pc_ip>,<random_port>
     +SOCINFO:<sock3>,<random_port>
     +SOCINFO:<sock4>,<target_ip>,<random_port>,<pc_ip>
     +SOCINF0ALL
   initial condition: APM2
   level: Integration
   module: TCPIP
-  steps: "1.PC上建立TCP 监听 test_tcp_port1\n2.target1上创建TCP socket1,本地ip target_ip\n3.target1上使用步骤2创建的socket1，去连接
-    PC的ip，test_tcp_port1,PC有ACCEPT\n4.target1上创建TCP socket2,本地ip target_ip\n5.target1上使用步骤4创建的socket2，去连接
-    PC的ip，test_tcp_port1,PC有ACCEPT\n6.target1 shutdown socket2 \n7.target1上创建TCP socket3,本地端口random_port\n8.target1上使用步骤7创建的socket3，去监听\n9.PC
+  steps: "1.PC上建立TCP 监听 random_port\n2.target1上创建TCP socket1,本地ip target_ip\n3.target1上使用步骤2创建的socket1，去连接
+    PC的ip，random_port,PC有ACCEPT\n4.target1上创建TCP socket2,本地ip target_ip\n5.target1上使用步骤4创建的socket2，去连接
+    PC的ip，random_port,PC有ACCEPT\n6.target1 shutdown socket2 \n7.target1上创建TCP socket3,本地端口random_port\n8.target1上使用步骤7创建的socket3，去监听\n9.PC
     CONNECT<random_port>,<target_ip> ,tcp 连接创建成功，创建socket4  \n10.target1 查询the socket
     information"
   sub module: TCP
-  summary: AP mode, get active socket info test
-  test environment: SSC_T1_1
+  summary: AP mode, TCP get active socket info test
+  test environment: SSC_T1_7
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) in different state
   version: v1 (2016-8-15)
@@ -1478,7 +1476,7 @@ test cases:
     11.target1 abort socket1
   sub module: TCP
   summary: AP mode, espconn abort test
-  test environment: SSC_T1_1
+  test environment: SSC_T1_7
   test point 1: basic function
   test point 2: use TCP SAP (socket/espconn API) in different state
   version: v1 (2016-8-15)
@@ -1501,7 +1499,7 @@ test cases:
   steps: 1.lev -N -t GET
   sub module: TCP
   summary: STA mode, max connections number query
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket option test
   version: v1 (2016-8-15)
@@ -1542,7 +1540,7 @@ test cases:
     5.lev -N -t SET -n 8
   sub module: TCP
   summary: STA mode, max connections number set
-  test environment: SSC_T1_1
+  test environment: SSC_T1_5
   test point 1: basic function
   test point 2: socket option test
   version: v1 (2016-8-15)
@@ -1613,7 +1611,7 @@ test cases:
     10.target1上使用步骤5创建的socket4，去连接 pc_ip_wifi的ip，test_tcp_port1,未连接成功
   sub module: TCP
   summary: STA mode, max connections fucntion verify
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket option test
   version: v1 (2016-8-15)
@@ -1674,7 +1672,7 @@ test cases:
     9.target1上lev -N -t SET -n 8
   sub module: TCP
   summary: STA mode, max connections set interact with TCP connect and send
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket option test
   version: v1 (2016-8-15)
@@ -1716,7 +1714,7 @@ test cases:
     5.target1上lev -A -s <sock1> -t SET -n 4
   sub module: TCP
   summary: STA mode, max TCP connection allowed by server test
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket option test
   version: v1 (2016-8-15)
@@ -1761,7 +1759,7 @@ test cases:
     -K -s <sock1> -t GET \n6.lev -K -s <sock1> -t SET -i 30 -d 3 -c 2\n7.等待30s"
   sub module: TCP
   summary: STA mode, keep alive test
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket option test
   version: v1 (2016-8-15)
@@ -1820,7 +1818,7 @@ test cases:
     -K -s <sock1> -t GET \n6.lev -K -s <sock1> -t SET -i 30 -d 3 -c 2\n7.PC往8266发送数据\n8.8266往PC上发送数据\n9.PC往8266发送146000数据\n10.8266往PC上发送1460*100数据\n11.等待30s"
   sub module: TCP
   summary: STA mode, keep alive interact with TCP send
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket option test
   version: v1 (2016-8-15)
@@ -1843,7 +1841,7 @@ test cases:
   steps: 1.lev -N -t GET
   sub module: TCP
   summary: AP mode, max connections number query
-  test environment: SSC_T1_1
+  test environment: SSC_T1_7
   test point 1: basic function
   test point 2: socket option test
   version: v1 (2016-8-15)
@@ -1884,7 +1882,7 @@ test cases:
     5.lev -N -t SET -n 8
   sub module: TCP
   summary: AP mode, max connections number set
-  test environment: SSC_T1_1
+  test environment: SSC_T1_7
   test point 1: basic function
   test point 2: socket option test
   version: v1 (2016-8-15)
@@ -1955,7 +1953,7 @@ test cases:
     10.target1上使用步骤5创建的socket4，去连接 pc_ip_wifi的ip，test_tcp_port1,未连接成功
   sub module: TCP
   summary: AP mode, max connections fucntion verify
-  test environment: SSC_T1_1
+  test environment: SSC_T1_7
   test point 1: basic function
   test point 2: socket option test
   version: v1 (2016-8-15)
@@ -2016,7 +2014,7 @@ test cases:
     9.target1上lev -N -t SET -n 8
   sub module: TCP
   summary: AP mode, max connections set interact with TCP connect and send
-  test environment: SSC_T1_1
+  test environment: SSC_T1_7
   test point 1: basic function
   test point 2: socket option test
   version: v1 (2016-8-15)
@@ -2059,7 +2057,7 @@ test cases:
     5.target1上lev -A -s <sock1> -t SET -n 4
   sub module: TCP
   summary: AP mode, max TCP connection allowed by server test
-  test environment: SSC_T1_1
+  test environment: SSC_T1_7
   test point 1: basic function
   test point 2: socket option test
   version: v1 (2016-8-15)
@@ -2105,7 +2103,7 @@ test cases:
     -K -s <sock1> -t GET \n6.lev -K -s <sock1> -t SET -i 30 -d 3 -c 2\n7.等待30s"
   sub module: TCP
   summary: AP mode, keep alive test
-  test environment: SSC_T1_1
+  test environment: SSC_T1_7
   test point 1: basic function
   test point 2: socket option test
   version: v1 (2016-8-15)
@@ -2165,11 +2163,11 @@ test cases:
     -K -s <sock1> -t GET \n6.lev -K -s <sock1> -t SET -i 30 -d 3 -c 2\n7.PC往8266发送数据\n8.8266往PC上发送数据\n9.PC往8266发送146000数据\n10.8266往PC上发送1460*100数据\n11.等待30s"
   sub module: TCP
   summary: AP mode, keep alive interact with TCP send
-  test environment: SSC_T1_1
+  test environment: SSC_T1_7
   test point 1: basic function
   test point 2: socket option test
   version: v1 (2016-8-15)
-- CI ready: 'Yes'
+- CI ready: 'No'
   ID: TCPIP_TCP_0401
   SDK: |-
     8266_NonOS
@@ -2181,11 +2179,11 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1>
+  - - SOC SOC1 LISTEN <random_port>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SOC SOC1 ACCEPT SOC2
     - - R SOC_COM L OK
@@ -2205,15 +2203,15 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1.PC上建立TCP 监听 test_tcp_port1
+    1.PC上建立TCP 监听 random_port
     2.target1上创建TCP socket1
-    3.target1上使用步骤2创建的socket1，去连接 PC的ip，test_tcp_port1
+    3.target1上使用步骤2创建的socket1，去连接 PC的ip，random_port
     4.PC与target1创建好TCP 连接，有ACCEPT
     5.断开与AP 连接
     6.8266往PC上发送5字节数据
   sub module: TCP
   summary: do TCP send after WIFI disconnected
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: abnormal/special use
   test point 2: TCP handling abnormal event
   version: v1 (2016-8-15)
@@ -2229,11 +2227,11 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1>
+  - - SOC SOC1 LISTEN <random_port>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SOC SOC1 ACCEPT SOC2
     - - R SOC_COM L OK
@@ -2253,15 +2251,15 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1.PC上建立TCP 监听 test_tcp_port1
+    1.PC上建立TCP 监听 random_port
     2.target1上创建TCP socket1
-    3.target1上使用步骤2创建的socket1，去连接 PC的ip，test_tcp_port1
+    3.target1上使用步骤2创建的socket1，去连接 PC的ip，random_port
     4.PC与target1创建好TCP 连接，有ACCEPT
     5.断开与AP 连接
     6.关闭建立的socket1连接
   sub module: TCP
   summary: "close TCP socket after WIFI \ndisconnected"
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: abnormal/special use
   test point 2: TCP handling abnormal event
   version: v1 (2016-8-15)
@@ -2277,11 +2275,11 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1>
+  - - SOC SOC1 LISTEN <random_port>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SOC SOC1 ACCEPT SOC2
     - - R SOC_COM L OK
@@ -2300,12 +2298,12 @@ test cases:
   initial condition: STAM2
   level: Integration
   module: TCPIP
-  steps: "1.PC上建立TCP 监听 test_tcp_port1\n2.target1上创建TCP socket1\n3.target1上使用步骤2创建的socket1，去连接
-    PC的ip，test_tcp_port1\n4.PC与target1创建好TCP 连接，有ACCEPT\n5.修改8266的Mode为softAP mode
+  steps: "1.PC上建立TCP 监听 random_port\n2.target1上创建TCP socket1\n3.target1上使用步骤2创建的socket1，去连接
+    PC的ip，random_port\n4.PC与target1创建好TCP 连接，有ACCEPT\n5.修改8266的Mode为softAP mode
     \n6.8266往PC上发送5字节数据"
   sub module: TCP
   summary: do TCP send after mode changed
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: abnormal/special use
   test point 2: TCP handling abnormal event
   version: v1 (2016-8-15)
@@ -2321,11 +2319,11 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1>
+  - - SOC SOC1 LISTEN <random_port>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SOC SOC1 ACCEPT SOC2
     - - R SOC_COM L OK
@@ -2344,12 +2342,12 @@ test cases:
   initial condition: STAM2
   level: Integration
   module: TCPIP
-  steps: "1.PC上建立TCP 监听 test_tcp_port1\n2.target1上创建TCP socket1\n3.target1上使用步骤2创建的socket1，去连接
-    PC的ip，test_tcp_port1\n4.PC与target1创建好TCP 连接，有ACCEPT\n5.修改8266的Mode为softAP mode
+  steps: "1.PC上建立TCP 监听 random_port\n2.target1上创建TCP socket1\n3.target1上使用步骤2创建的socket1，去连接
+    PC的ip，random_port\n4.PC与target1创建好TCP 连接，有ACCEPT\n5.修改8266的Mode为softAP mode
     \n6.关闭建立的socket1连接"
   sub module: TCP
   summary: close TCP socket after mode changed
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: abnormal/special use
   test point 2: TCP handling abnormal event
   version: v1 (2016-8-15)
@@ -2365,11 +2363,11 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1>
+  - - SOC SOC1 LISTEN <random_port>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SOC SOC1 ACCEPT SOC2
     - - R SOC_COM L OK
@@ -2391,15 +2389,15 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1.PC上建立TCP 监听 test_tcp_port1
+    1.PC上建立TCP 监听 random_port
     2.target1上创建TCP socket1
-    3.target1上使用步骤2创建的socket1，去连接 PC的ip，test_tcp_port1
+    3.target1上使用步骤2创建的socket1，去连接 PC的ip，random_port
     4.PC与target1创建好TCP 连接，有ACCEPT
     5.PC 网卡 disable
     6.target1上使用socket1发送数据，等待 90 分钟
   sub module: TCP
   summary: do TCP send after PC NIC disabled
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: abnormal/special use
   test point 2: TCP handling abnormal event
   version: v1 (2016-8-15)
@@ -2415,11 +2413,11 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1>
+  - - SOC SOC1 LISTEN <random_port>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SOC SOC1 ACCEPT SOC2
     - - R SOC_COM L OK
@@ -2438,11 +2436,11 @@ test cases:
   initial condition: STAM2
   level: Integration
   module: TCPIP
-  steps: "1.PC上建立TCP 监听 test_tcp_port1\n2.target1上创建TCP socket1\n3.target1上使用步骤2创建的socket1，去连接
-    PC的ip，test_tcp_port1\n4.PC与target1创建好TCP 连接，有ACCEPT\n5.PC上网卡禁止掉 \n6.关闭建立的socket1连接"
+  steps: "1.PC上建立TCP 监听 random_port\n2.target1上创建TCP socket1\n3.target1上使用步骤2创建的socket1，去连接
+    PC的ip，random_port\n4.PC与target1创建好TCP 连接，有ACCEPT\n5.PC上网卡禁止掉 \n6.关闭建立的socket1连接"
   sub module: TCP
   summary: close TCP socket after PC NIC disabled
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: abnormal/special use
   test point 2: TCP handling abnormal event
   version: v1 (2016-8-15)
@@ -2453,16 +2451,16 @@ test cases:
     8266_RTOS
     ESP32_IDF
   Test App: SSC
-  allow fail: '1/2'
+  allow fail: ''
   auto test: 'Yes'
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1>
+  - - SOC SOC1 LISTEN <random_port>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SOC SOC1 ACCEPT SOC2
     - - R SOC_COM L OK
@@ -2487,12 +2485,12 @@ test cases:
   initial condition: STAM2
   level: Integration
   module: TCPIP
-  steps: "1.PC上建立TCP 监听 test_tcp_port1\n2.target1上创建TCP socket1\n3.target1上使用步骤2创建的socket1，去连接
-    PC的ip，test_tcp_port1\n4.PC与target1创建好TCP 连接，有ACCEPT\n5.关闭8266的DHCP 1\n6.设置sta
+  steps: "1.PC上建立TCP 监听 random_port\n2.target1上创建TCP socket1\n3.target1上使用步骤2创建的socket1，去连接
+    PC的ip，random_port\n4.PC与target1创建好TCP 连接，有ACCEPT\n5.关闭8266的DHCP 1\n6.设置sta
     ip \n7.查询sta ip 地址是否生效\n8.8266往PC上发送5字节数据"
   sub module: TCP
   summary: do TCP send after IP changed
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: abnormal/special use
   test point 2: TCP handling abnormal event
   version: v1 (2016-8-15)
@@ -2508,11 +2506,11 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1>
+  - - SOC SOC1 LISTEN <random_port>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SOC SOC1 ACCEPT SOC2
     - - R SOC_COM L OK
@@ -2537,12 +2535,12 @@ test cases:
   initial condition: STAM2
   level: Integration
   module: TCPIP
-  steps: "1.PC上建立TCP 监听 test_tcp_port1\n2.target1上创建TCP socket1\n3.target1上使用步骤2创建的socket1，去连接
-    PC的ip，test_tcp_port1\n4.PC与target1创建好TCP 连接，有ACCEPT\n5.关闭8266的DHCP 1\n6.设置sta
+  steps: "1.PC上建立TCP 监听 random_port\n2.target1上创建TCP socket1\n3.target1上使用步骤2创建的socket1，去连接
+    PC的ip，random_port\n4.PC与target1创建好TCP 连接，有ACCEPT\n5.关闭8266的DHCP 1\n6.设置sta
     ip \n7.查询sta ip 地址是否生效\n8.关闭建立的socket1连接"
   sub module: TCP
   summary: close TCP socket after IP changed
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: abnormal/special use
   test point 2: TCP handling abnormal event
   version: v1 (2016-8-15)
@@ -2558,11 +2556,11 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1>
+  - - SOC SOC1 LISTEN <random_port>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SOC SOC1 ACCEPT SOC2
     - - R SOC_COM L OK
@@ -2585,16 +2583,16 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1.PC上建立TCP 监听 test_tcp_port1
+    1.PC上建立TCP 监听 random_port
     2.target1上创建TCP socket1
-    3.target1上使用步骤2创建的socket1，去连接 PC的ip，test_tcp_port1
+    3.target1上使用步骤2创建的socket1，去连接 PC的ip，random_port
     4.PC与target1创建好TCP 连接，有ACCEPT
     5.target1上创建TCP socket2
     6.8266往PC socket2上发送5字节数据
     7.8266往PC socket1上发送5字节数据
   sub module: TCP
   summary: do TCP send after socket changed
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: abnormal/special use
   test point 2: TCP handling abnormal event
   version: v1 (2016-8-15)
@@ -2610,11 +2608,11 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SOC SOC1 LISTEN <test_tcp_port1>
+  - - SOC SOC1 LISTEN <random_port>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - R SSC1 RE CONNECT:\d+,OK
   - - SOC SOC1 ACCEPT SOC2
     - - R SOC_COM L OK
@@ -2637,16 +2635,16 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1.PC上建立TCP 监听 test_tcp_port1
+    1.PC上建立TCP 监听 random_port
     2.target1上创建TCP socket1
-    3.target1上使用步骤2创建的socket1，去连接 PC的ip，test_tcp_port1
+    3.target1上使用步骤2创建的socket1，去连接 PC的ip，random_port
     4.PC与target1创建好TCP 连接，有ACCEPT
     5.target1上创建TCP socket2
     6.关闭socket1 连接
     7.关闭socket2连接
   sub module: TCP
   summary: close TCP send after socket changed
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: abnormal/special use
   test point 2: TCP handling abnormal event
   version: v1 (2016-8-15)
@@ -2669,7 +2667,7 @@ test cases:
     - - R PC_COM C +NIC_START:OK
   - - SSC SSC1 soc -B -t TCP
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - ''
   - - DELAY 10
     - - R SSC1 RE CONNECT:\d+,ERROR
@@ -2683,7 +2681,7 @@ test cases:
     2. target try to connect to TCP server with PC NIC IP
   sub module: TCP
   summary: PC do not reply TCP SYN of target
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: abnormal/special use
   test point 2: TCP connect and disconnect abnormal case
   version: v1 (2015-8-15)
@@ -2699,8 +2697,6 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - PING <target_ip> -c 1
-    - - R PC_COM C +PING
   - - SOC SOC1 LISTEN <random_port> <pc_ip>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP
@@ -2729,25 +2725,23 @@ test cases:
     6.OK
     7.OK
     8.OK
-    9.OK
-    10.等待30s
+    9.等待30s
   initial condition: STAM2
   level: Integration
   module: TCPIP
   steps: |-
-    1.PING <target_ip>
-    2.PC上建立TCP 监听 random_port
-    3.target1上创建TCP socket
-    4.target1上步骤3创建的socket设置so_keepalive属性
-    5.target1上步骤3创建的socket设置so_keepidle参数
-    6.target1上步骤3创建的socket设置so_keepintvl参数
-    7.target1上步骤3创建的socket设置so_keepcnt参数
-    8.target1上使用步骤7具有so_keepalive属性及参数的socket，去连接 PC的ip，random_port
-    9.PC上网卡禁止掉
-    10.等待30s
+    1.PC上建立TCP 监听 random_port
+    2.target1上创建TCP socket
+    3.target1上步骤3创建的socket设置so_keepalive属性
+    4.target1上步骤3创建的socket设置so_keepidle参数
+    5.target1上步骤3创建的socket设置so_keepintvl参数
+    6.target1上步骤3创建的socket设置so_keepcnt参数
+    7.target1上使用步骤7具有so_keepalive属性及参数的socket，去连接 PC的ip，random_port
+    8.PC上网卡禁止掉
+    9.等待30s
   sub module: TCP
   summary: Test socket with so_keepalive option
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket test with different option
   version: v1 (2016-8-15)
@@ -2762,9 +2756,9 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <random_port>
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <random_port>
     - - R SSC1 C +BIND:ERROR
   execution time: 0.0
   expected result: |-
@@ -2778,7 +2772,7 @@ test cases:
     2.target1上创建TCP socket,bind test_udp_port1
   sub module: TCP
   summary: Test socket with so_reuseaddr option closed on TCP submodule
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket test with different option
   version: v1 (2016-8-15)
@@ -2818,19 +2812,17 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1.find esp-idf/components/lwip/include/lwip/lwip/opt.h file, make "#define SO_REUSE  1" instead of "#define SO_REUSE  0"
-    2.switch to esp-idf/SSC, run "./gen_misc_ng.sh SSC_OPTION" and "make flash", then run the test case normally
-    3.PC上建立TCP 监听 random_port
-    4.target1上创建TCP socket,bind test_tcp_port2
-    5.target1上使用步骤4创建的socket，去连接 PC的ip，random_port
-    6.关闭socket
-    7.target1上创建TCP socket,bind test_tcp_port2
-    8.target1上建立TCP 监听
-    9.关闭socket
+    1.PC上建立TCP 监听 random_port
+    2.target1上创建TCP socket,bind test_tcp_port2
+    3.target1上使用步骤4创建的socket，去连接 PC的ip，random_port
+    4.关闭socket
+    5.target1上创建TCP socket,bind test_tcp_port2
+    6.target1上建立TCP 监听
+    7.关闭socket
   sub module: TCP
   summary: Test socket with so_reuseaddr option opened that close TCP connection not
     react immediately on ESP32
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket test with different option
   version: v1 (2016-8-15)
@@ -2843,9 +2835,9 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <random_port>
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <random_port>
     - - R SSC1 A <sock2>:BIND:(\d+),OK
   execution time: 0.0
   expected result: |-
@@ -2855,14 +2847,12 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1.find esp-idf/components/lwip/include/lwip/lwip/opt.h file, make "#define SO_REUSE  1" instead of "#define SO_REUSE  0"
-    2.switch to esp-idf/SSC, run "./gen_misc_ng.sh SSC_OPTION" and "make flash", then run the test case normally
-    3.target1上创建TCP socket,bind test_udp_port1
-    4.target1上创建TCP socket,bind test_udp_port1
+    1.target1上创建TCP socket,bind test_udp_port1
+    2.target1上创建TCP socket,bind test_udp_port1
   sub module: TCP
   summary: Test socket with so_reuseaddr option opened that build two tcp sockets
     by binding same ip and port on ESP32
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket test with different option
   version: v1 (2016-8-15)
@@ -2893,7 +2883,7 @@ test cases:
     - - R PC_COM C OK
   - - SSC SSC1 soc -S -s <sock1> -l 5000
     - - P SSC1 RE SEND:\d+,OK
-  - - SSC SSC1 soc -S -s <sock1> -l 5000
+  - - SSC SSC1 soc -S -s <sock1> -l 5000 -n 4
     - - P SSC1 RE SEND:\d+,ERROR,11
   execution time: 0.0
   expected result: |-
@@ -2923,7 +2913,7 @@ test cases:
     10.target1 send 5000 bytes to PC
   sub module: TCP
   summary: Test socket with so_sndtimeo option on ESP32
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket test with different option
   version: v1 (2016-8-15)
@@ -2938,8 +2928,6 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - PING <target_ip> -c 1
-    - - R PC_COM C +PING
   - - SOC SOC1 LISTEN <random_port> <pc_ip>
     - - R SOC_COM L OK
   - - SSC SSC1 soc -B -t TCP
@@ -2962,23 +2950,21 @@ test cases:
     4.OK
     5.OK
     6.OK
-    7.OK
-    8.CLOSED
+    7.CLOSED
   initial condition: STAM2
   level: Integration
   module: TCPIP
   steps: |-
-    1.PING <target_ip>
-    2.PC上建立TCP 监听 random_port
-    3.target1上创建TCP socket
-    4.target1上使用步骤3创建的socket，去连接 PC的ip，random_port
-    5.PC与target1 创建好TCP 连接，有ACCEPT
-    6.PC send 5 bytes to target1
-    7.target1上对步骤3创建的socket设置so_rcvtimeo属性
-    8.PC send 5 bytes to target1
+    1.PC上建立TCP 监听 random_port
+    2.target1上创建TCP socket
+    3.target1上使用步骤3创建的socket，去连接 PC的ip，random_port
+    4.PC与target1 创建好TCP 连接，有ACCEPT
+    5.PC send 5 bytes to target1
+    6.target1上对步骤3创建的socket设置so_rcvtimeo属性
+    7.PC send 5 bytes to target1
   sub module: TCP
   summary: Test socket with so_rcvtimeo option
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket test with different option
   version: v1 (2016-8-15)
@@ -3017,7 +3003,7 @@ test cases:
     4.target1上使用步骤2创建的socket，去连接 PC的ip，random_port, 获取 error code
   sub module: TCP
   summary: Test socket with so_error option
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket test with different option
   version: v1 (2016-8-15)
@@ -3066,7 +3052,7 @@ test cases:
     7.查询空闲ram
   sub module: TCP
   summary: Test socket with so_linger option
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket test with different option
   version: v1 (2016-8-15)
@@ -3081,13 +3067,13 @@ test cases:
   - ''
   - - SOC SOC1 LISTEN <random_port> <pc_ip>
     - - R SOC_COM L OK
-  - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <random_port>
     - - R SSC1 A <sock1>:BIND:(\d+),OK
   - - SSC SSC1 soc -C -s <sock1> -i <pc_ip> -p <random_port>
     - - P SSC1 RE CONNECT:\d+,OK
   - - SSC SSC1 soc -T
     - - R SSC1 C CLOSEALL
-  - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <test_tcp_port1>
+  - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <random_port>
     - - R SSC1 A <sock2>:BIND:(\d+),OK
   - - SSC SSC1 soc -L -s <sock2>
     - - P SSC1 RE LISTEN:\d+,OK
@@ -3107,15 +3093,15 @@ test cases:
     2.switch to ESP8266_RTOS_SDK/third_party, run "./make_lib.sh lwip" risc,then continuely run "ll ../lib"
     3.switch to ESP8266_RTOS_SDK/SSC, run "./gen_misc_rtos.sh SSC", then run the test case normally
     4.PC上建立TCP 监听 random_port
-    5.target1上创建TCP socket,bind test_tcp_port1
+    5.target1上创建TCP socket,bind random_port
     6.target1上使用步骤5创建的socket，去连接 PC的ip，random_port
     7.关闭socket
-    8.target1上创建TCP socket,bind test_tcp_port1
+    8.target1上创建TCP socket,bind random_port
     9.target1上建立TCP 监听
   sub module: TCP
   summary: Test socket with so_reuseaddr option opened that close TCP connection not
     react immediately on 8266_RTOS
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket test with different option
   version: v1 (2016-8-15)
@@ -3128,9 +3114,9 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <test_udp_port1>
+  - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <est_tcp_port1>
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <test_udp_port1>
+  - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <est_tcp_port1>
     - - R SSC1 A <sock2>:BIND:(\d+),OK
   execution time: 0.0
   expected result: |-
@@ -3143,12 +3129,12 @@ test cases:
     1.find ESP8266_RTOS_SDK/include/lwip/lwip/opt.h file, make "#define SO_REUSE  1" instead of "#define SO_REUSE  0"
     2.switch to ESP8266_RTOS_SDK/third_party, run "./make_lib.sh lwip" risc,then continuely run "ll ../lib"
     3.switch to ESP8266_RTOS_SDK/SSC, run "./gen_misc_rtos.sh SSC", then run the test case normally
-    4.target1上创建TCP socket,bind test_udp_port1
-    5.target1上创建TCP socket,bind test_udp_port1
+    4.target1上创建TCP socket,bind test_tcp_port2
+    5.target1上创建TCP socket,bind test_tcp_port2
   sub module: TCP
   summary: Test socket with so_reuseaddr option opened that build two tcp sockets
     by binding same ip and port on 8266_RTOS
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket test with different option
   version: v1 (2016-8-15)
@@ -3209,7 +3195,7 @@ test cases:
     10.target1 send 1500 bytes to PC
   sub module: TCP
   summary: Test socket with so_sndtimeo option on 8266_RTOS
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket test with different option
   version: v1 (2016-8-15)
@@ -3262,7 +3248,7 @@ test cases:
     8.关闭socket
   sub module: TCP
   summary: Test socket with Maxconnect option
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket test with different option
   version: v1 (2016-8-15)
@@ -3275,8 +3261,6 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - PING <target_ip> -c 1
-    - - R PC_COM C +PING
   - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <random_port>
     - - R SSC1 A <sock1>:BIND:(\d+),OK
   - - SSC SSC1 soc -L -s <sock1>
@@ -3291,27 +3275,25 @@ test cases:
     - - R SSC1 C CLOSE
   execution time: 0.0
   expected result: |-
-    1.PING <target_ip>
+    1.OK
     2.OK
     3.OK
-    4.OK
-    5.PC TCP client accept
-    6.ERROR
-    7.CLOSE
+    4.PC TCP client accept
+    5.ERROR
+    6.CLOSE
   initial condition: STAM2
   level: Integration
   module: TCPIP
   steps: |-
-    1.PING <target_ip>
-    2.target1上创建TCP socket，bind random_port
-    3.target1上使用步骤2创建的socket1,建立TCP 监听
-    4.target1上对步骤2创建的socket设置 MaxConnectNum属性
+    1.target1上创建TCP socket，bind random_port
+    2.target1上使用步骤2创建的socket1,建立TCP 监听
+    3.target1上对步骤2创建的socket设置 MaxConnectNum属性
+    4.PC TCP 连接到target1  <random_port>,<target_ip>
     5.PC TCP 连接到target1  <random_port>,<target_ip>
-    6.PC TCP 连接到target1  <random_port>,<target_ip>
-    7.关闭socket
+    6.关闭socket
   sub module: TCP
   summary: Test socket with MaxConnectNum option
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket test with different option
   version: v1 (2016-8-15)
@@ -3324,8 +3306,6 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - PING <target_ip> -c 1
-    - - R PC_COM C +PING
   - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <test_tcp_port1>
     - - R SSC1 A <sock1>:BIND:(\d+),OK
   - - SSC SSC1 socopt -S -s <sock1> -k Registtime -o 20
@@ -3341,22 +3321,20 @@ test cases:
     1.OK
     2.OK
     3.OK
-    4.OK
-    5.PC TCP client accept
-    6.等待30s
+    4.PC TCP client accept
+    5.等待30s
   initial condition: STAM2
   level: Integration
   module: TCPIP
   steps: |-
-    1.PING <target_ip>
-    2.target1上创建TCP socket，bind test_tcp_port1
-    3.target1上对步骤2创建的socket设置 Registtime 属性
-    4.target1上使用步骤3具有Registtime属性的socket1,建立TCP 监听
-    5.PC TCP 连接到target1 <test_tcp_port1>, <target_ip>
-    6.等待30s
+    1.target1上创建TCP socket，bind test_tcp_port1
+    2.target1上对步骤2创建的socket设置 Registtime 属性
+    3.target1上使用步骤3具有Registtime属性的socket1,建立TCP 监听
+    4.PC TCP 连接到target1 <test_tcp_port1>, <target_ip>
+    5.等待30s
   sub module: TCP
   summary: Test socket with Registtime option
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket test with different option
   version: v1 (2016-8-15)
@@ -3393,7 +3371,7 @@ test cases:
     4.target1上对步骤2创建的socket设置 Abort 属性
   sub module: TCP
   summary: Test socket with Abort option
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket test with different option
   version: v1 (2016-8-15)
@@ -3439,7 +3417,7 @@ test cases:
   sub module: TCP
   summary: Test socket with so_reuseaddr option opened that close TCP connection not
     react immediately on 8266_NonOS
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket test with different option
   version: v1 (2016-8-15)
@@ -3452,9 +3430,9 @@ test cases:
   category: Function
   cmd set:
   - ''
-  - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <test_udp_port1>
+  - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <test_tcp_port1>
     - - R SSC1 A <sock1>:BIND:(\d+),OK
-  - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <test_udp_port1>
+  - - SSC SSC1 soc -B -t TCP -i <target_ip> -p <test_tcp_port1>
     - - R SSC1 A <sock2>:BIND:(\d+),OK
   execution time: 0.0
   expected result: |-
@@ -3464,12 +3442,12 @@ test cases:
   level: Integration
   module: TCPIP
   steps: |-
-    1.target1上创建TCP socket,bind test_udp_port1
-    2.target1上创建TCP socket,bind test_udp_port1
+    1.target1上创建TCP socket,bind test_tcp_port1
+    2.target1上创建TCP socket,bind test_tcp_port1
   sub module: TCP
   summary: Test socket with so_reuseaddr option opened that build two tcp sockets
     by binding same ip and port on 8266_NonOS
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: basic function
   test point 2: socket test with different option
   version: v1 (2016-8-15)
@@ -3479,7 +3457,7 @@ test cases:
     8266_NonOS
     8266_RTOS
     ESP32_IDF
-  Test App: SSC
+  Test App: SSC, SSC_NonBlocking
   auto test: 'Yes'
   category: Stress
   cmd set:
@@ -3506,17 +3484,14 @@ test cases:
     Loop executing step 1
   sub module: TCP
   summary: test possible TCP connect/disconnect method
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: function + stress
   test point 2: TCP connect and disconnect test
   version: v2 (2016-11-15)
 - CI ready: 'Yes'
   ID: TCPIP_TCP_5101
-  SDK: |-
-    8266_NonOS
-    8266_RTOS
-    ESP32_IDF
-  Test App: SSC
+  SDK: ESP32_IDF
+  Test App: SSC, SSC_NonBlocking, SSC_PSRAM
   auto test: 'Yes'
   category: Stable
   cmd set:
@@ -3525,7 +3500,51 @@ test cases:
     - - dummy
   - - test_time = 720
     - - ''
-  - - server_port = "<test_tcp_port1>"
+  - - server_port = "<random_port>"
+    - - ''
+  - - server_echo = True
+    - - ''
+  - - sta_number = 4
+    - - ''
+  - - send_delay = 50
+    - - ''
+  - - ap_ip = "<target_ap_ip>"
+    - - ''
+  execution time: 12.0
+  expected result: |-
+    1. succeed
+    2. succeed
+    3. succeed
+    4. all TCP connection not disconnected
+  initial condition: None
+  level: Integration
+  module: TCPIP
+  steps: |-
+    1. all sta connect to softap
+    2. create tcp server on softap
+    3. all sta connect to softap tcp server
+    4. do bi-direction send on all tcp connections
+  sub module: TCP
+  summary: 1 AP 4 STA TCP stable test
+  test environment: SSC_T5_1
+  test point 1: stable
+  test point 2: TCP stable test
+  version: v2 (2016-11-15)
+- CI ready: 'Yes'
+  ID: TCPIP_TCP_5101
+  SDK: |-
+    8266_NonOS
+    8266_RTOS
+  Test App: SSC, SSC_NonBlocking
+  auto test: 'Yes'
+  category: Stable
+  cmd set:
+  - TCPStress/TCPAPNSTA
+  - - send_len = 1460
+    - - dummy
+  - - test_time = 720
+    - - ''
+  - - server_port = "<random_port>"
     - - ''
   - - server_echo = True
     - - ''
@@ -3584,7 +3603,7 @@ test cases:
     2. PC send random length data to target
   sub module: TCP
   summary: send random length segment to target
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: stable
   test point 2: TCP stable test
   version: v2 (2016-11-15)
@@ -3605,7 +3624,7 @@ test cases:
     - - ''
   - - test_count = 0xFFFFFF
     - - ''
-  - - server_port = "<test_tcp_port1>"
+  - - server_port = "<random_port>"
     - - ''
   - - server_port_2 = "<test_tcp_port2>"
     - - ''
@@ -3717,6 +3736,39 @@ test cases:
   test point 2: TCP stress test
   version: v1 (2016-8-15)
 - CI ready: 'Yes'
+  ID: TCPIP_TCP_5106
+  SDK: |-
+    8266_NonOS
+    8266_RTOS
+    ESP32_IDF
+  Test App: SSC
+  auto test: 'Yes'
+  category: Stable
+  cmd set:
+  - TCPStress/TCPRandomSend
+  - - delay_config = [0, 0.01, 0.1, 0.5, 1]
+    - - dummy
+  - - send_count = 1000
+    - - ''
+  - - test_time = 300
+    - - ''
+  execution time: 12.0
+  expected result: |-
+    1. succeed
+    2. succeed
+  initial condition: T1_ETH
+  level: Integration
+  module: TCPIP
+  steps: |-
+    1. create TCP connection
+    2. PC send random length data to target
+  sub module: TCP
+  summary: send random length segment to target for Ethernet
+  test environment: SSC_T1_Ethernet
+  test point 1: stable
+  test point 2: TCP stable test
+  version: v2 (2016-11-15)
+- CI ready: 'Yes'
   ID: TCPIP_TCP_5201
   SDK: |-
     8266_NonOS
@@ -3751,17 +3803,14 @@ test cases:
     3. do send/recv on all tcp connections
   sub module: TCP
   summary: TCP send/recv stress test
-  test environment: SSC_T2_1
+  test environment: SSC_T2_5
   test point 1: stress
   test point 2: TCP stress test
   version: v2 (2016-11-15)
 - CI ready: 'Yes'
   ID: TCPIP_TCP_5202
-  SDK: |-
-    8266_NonOS
-    8266_RTOS
-    ESP32_IDF
-  Test App: SSC
+  SDK: ESP32_IDF
+  Test App: SSC, SSC_NonBlocking, SSC_PSRAM
   auto test: 'Yes'
   category: Stress
   cmd set:
@@ -3788,7 +3837,43 @@ test cases:
     2. send specified pattern on both direction
   sub module: TCP
   summary: TCP send/recv data validation
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
+  test point 1: stress
+  test point 2: TCP stress test
+  version: v2 (2016-11-15)
+- CI ready: 'Yes'
+  ID: TCPIP_TCP_5202
+  SDK: |-
+    8266_NonOS
+    8266_RTOS
+  Test App: SSC, SSC_NonBlocking
+  auto test: 'Yes'
+  category: Stress
+  cmd set:
+  - TCPStress/TCPDataValidation
+  - - test_time = 1440
+    - - dummy
+  - - tx_enable = True
+    - - ''
+  - - rx_enable = True
+    - - ''
+  - - conn_num = 1
+    - - ''
+  - - send_len = 1024
+    - - ''
+  execution time: 24.0
+  expected result: |-
+    1. succeed
+    2. verify reciveid data on target and PC succeed
+  initial condition: STAM2
+  level: Integration
+  module: TCPIP
+  steps: |-
+    1. create TCP connection
+    2. send specified pattern on both direction
+  sub module: TCP
+  summary: TCP send/recv data validation
+  test environment: SSC_T1_6
   test point 1: stress
   test point 2: TCP stress test
   version: v2 (2016-11-15)
@@ -3827,13 +3912,50 @@ test cases:
   test point 1: stress
   test point 2: TCP stress test
   version: v1 (2016-8-15)
+- CI ready: 'Yes'
+  ID: TCPIP_TCP_5204
+  SDK: |-
+    8266_NonOS
+    8266_RTOS
+    ESP32_IDF
+  Test App: SSC_Ethernet
+  auto test: 'Yes'
+  category: Stress
+  cmd set:
+  - TCPStress/TCPDataValidation
+  - - test_time = 1440
+    - - dummy
+  - - tx_enable = True
+    - - ''
+  - - rx_enable = True
+    - - ''
+  - - conn_num = 1
+    - - ''
+  - - send_len = 1024
+    - - ''
+  execution time: 24.0
+  expected result: |-
+    1. succeed
+    2. verify reciveid data on target and PC succeed
+  initial condition: T1_ETH
+  level: Integration
+  module: TCPIP
+  steps: |-
+    1. create TCP connection
+    2. send specified pattern on both direction
+  sub module: TCP
+  summary: TCP send/recv data validation for Ethernet
+  test environment: SSC_T1_Ethernet
+  test point 1: stress
+  test point 2: TCP stress test
+  version: v2 (2016-11-15)
 - CI ready: 'No'
   ID: TCPIP_TCP_5301
   SDK: |-
     8266_NonOS
     8266_RTOS
     ESP32_IDF
-  Test App: SSC
+  Test App: SSC, SSC_NonBlocking
   auto test: 'Yes'
   category: Stress
   cmd set:
@@ -3844,7 +3966,7 @@ test cases:
     - - ''
   - - rx_enable = False
     - - ''
-  - - measure_period = 5
+  - - measure_period = 30
     - - ''
   execution time: 2.0
   expected result: |-
@@ -3871,7 +3993,7 @@ test cases:
     8266_NonOS
     8266_RTOS
     ESP32_IDF
-  Test App: SSC
+  Test App: SSC, SSC_NonBlocking
   auto test: 'Yes'
   category: Stress
   cmd set:
@@ -3882,7 +4004,7 @@ test cases:
     - - ''
   - - rx_enable = True
     - - ''
-  - - measure_period = 5
+  - - measure_period = 30
     - - ''
   execution time: 2.0
   expected result: |-
@@ -3909,7 +4031,7 @@ test cases:
     8266_NonOS
     8266_RTOS
     ESP32_IDF
-  Test App: SSC
+  Test App: SSC_Ethernet
   auto test: 'Yes'
   category: Stress
   cmd set:
@@ -3937,7 +4059,7 @@ test cases:
     Loop for step 1-2
   sub module: TCP
   summary: TCP throughput Tx for Ethernet
-  test environment: SSC_T1_1
+  test environment: SSC_T1_Ethernet
   test point 1: stress
   test point 2: TCP stress test
   version: v1 (2016-8-15)
@@ -3947,7 +4069,7 @@ test cases:
     8266_NonOS
     8266_RTOS
     ESP32_IDF
-  Test App: SSC
+  Test App: SSC_Ethernet
   auto test: 'Yes'
   category: Stress
   cmd set:
@@ -3975,7 +4097,7 @@ test cases:
     Loop for step 1-2
   sub module: TCP
   summary: TCP throughput Rx for Ethernet
-  test environment: SSC_T1_1
+  test environment: SSC_T1_Ethernet
   test point 1: stress
   test point 2: TCP stress test
   version: v1 (2016-8-15)
@@ -3985,7 +4107,7 @@ test cases:
     8266_NonOS
     8266_RTOS
     ESP32_IDF
-  Test App: SSC
+  Test App: SSC_Ethernet
   auto test: 'Yes'
   category: Stress
   cmd set:
@@ -4013,7 +4135,7 @@ test cases:
     Loop for step 1-3
   sub module: TCP
   summary: Eth random close while sending packets
-  test environment: SSC_T1_1
+  test environment: SSC_T1_Ethernet
   test point 1: stress
   test point 2: TCP stress test
   version: v1 (2016-8-15)
@@ -4051,7 +4173,7 @@ test cases:
     3. send TCP packet
     4. calculate the troughput
   sub module: TCP
-  summary: STA TCP throughput while connecting with softAP
+  summary: STA TCP throughput Tx while connected with softAP
   test environment: SSC_T2_ShieldBox2
   test point 1: Performance test
   test point 2: TCP throughput
@@ -4090,11 +4212,157 @@ test cases:
     3. send TCP packet
     4. calculate the troughput
   sub module: TCP
-  summary: STA TCP throughput while connecting with softAP
+  summary: STA TCP throughput Rx while connected with softAP
   test environment: SSC_T2_ShieldBox2
   test point 1: Performance test
   test point 2: TCP throughput
   version: v1 (2016-10-18)
+- CI ready: 'No'
+  ID: TCPIP_TCP_5701
+  SDK: |-
+    8266_NonOS
+    8266_RTOS
+    ESP32_IDF
+  Test App: SSC_Ethernet
+  auto test: 'Yes'
+  category: Stress
+  cmd set:
+  - StableTest/EthGetIP
+  - - test_count = 5000
+    - [dummy]
+  comment: ''
+  execution time: 5.0
+  expected result: '1. succeed
+
+    2. succeed
+
+    3. succeed
+
+    4. succeed'
+  initial condition: None
+  initial condition description (auto): none
+  level: Integration
+  module: TCPIP
+  steps: |-
+    1. reboot
+
+    2. open eth
+
+    3. delay 10s
+
+    4. ip query
+  sub module: TCP
+  summary: Eth get ip test
+  test environment: SSC_T1_Ethernet
+  test point 1: stress
+  test point 2: TCP stress test
+  version: v1 (2016-8-15)
+- CI ready: 'Yes'
+  ID: TCPIP_TCP_5801
+  SDK: 'ESP32_IDF'
+  Test App: SSC
+  auto test: 'Yes'
+  category: Stress
+  cmd set:
+  - TCPStress/TCPSendRecvIPv6
+  - - send_len = 1460
+    - [dummy]
+  - - test_time = 300
+    - ['']
+  - - duplex = True
+    - ['']
+  - - conn_num = 5
+    - ['']
+  - - send_delay = 20
+    - ['']
+  execution time: 12.0
+  expected result: |-
+    1. succeed
+    2. succeed
+    3. all TCP connection not disconnected
+  initial condition: T2_1
+  level: Integration
+  module: TCPIP
+  steps: |-
+    1. sta connect to softap
+    2. create multiple tcp connection
+    3. do send/recv on all tcp connections
+  sub module: TCP
+  summary: TCP send/recv stress test with TCPSendRecvIPv6
+  test environment: SSC_T2_5
+  test point 1: stress
+  test point 2: TCP stress test(IPv6)
+  version: v2 (2016-11-15)
+- CI ready: 'Yes'
+  ID: TCPIP_TCP_5802
+  SDK: 'ESP32_IDF'
+  Test App: SSC
+  auto test: 'Yes'
+  category: Stress
+  cmd set:
+  - TCPStress/TCPSoftAPSTASendRecvIPv6
+  - - send_len = 1460
+    - [dummy]
+  - - test_time = 300
+    - ['']
+  - - conn_num = 5
+    - ['']
+  - - duplex = True
+    - ['']
+  - - send_delay = 20
+    - ['']
+  execution time: 12.0
+  expected result: |-
+    1. succeed
+    2. succeed
+    3. all TCP connection not disconnected
+  initial condition: T3_1
+  level: Integration
+  module: TCPIP
+  steps: |-
+    1. sta connect to softap
+    2. create multiple tcp connection
+    3. do send/recv on all tcp connections
+  sub module: TCP
+  summary: TCP send/recv stress test with TCPSoftAPSTASendRecvIPv6
+  test environment: SSC_T3_1
+  test point 1: stress
+  test point 2: TCP stress test(IPv6)
+  version: v2 (2016-11-15)
+- CI ready: 'Yes'
+  ID: TCPIP_TCP_5803
+  SDK: 'ESP32_IDF'
+  Test App: SSC, SSC_NonBlocking
+  auto test: 'Yes'
+  category: Stress
+  cmd set:
+  - TCPStress/TCPDataValidationIPv6
+  - - test_time = 300
+    - [dummy]
+  - - tx_enable = True
+    - ['']
+  - - rx_enable = True
+    - ['']
+  - - conn_num = 5
+    - ['']
+  - - send_len = 1024
+    - ['']
+  execution time: 24.0
+  expected result: |-
+    1. succeed
+    2. verify reciveid data on target and PC succeed
+  initial condition: STAAP2
+  level: Integration
+  module: TCPIP
+  steps: |-
+    1. create TCP connection
+    2. send specified pattern on both direction
+  sub module: TCP
+  summary: TCP send/recv data validation with TCPDataValidationIPv6
+  test environment: SSC_T1_6
+  test point 1: stress
+  test point 2: TCP stress test(IPv6)
+  version: v2 (2016-11-15)
 - CI ready: 'No'
   ID: TCPIP_TCP_6001
   SDK: ESP32_IDF, 8266_NonOS, 8266_RTOS
@@ -4123,7 +4391,7 @@ test cases:
     send_delay 4. repeat step 2-3
   sub module: TCP
   summary: TCP send receive delay stable test
-  test environment: SSC_T1_1
+  test environment: SSC_T1_6
   test point 1: Stable
   test point 2: TCP send receive stable test
   version: v1 (2017-04-21)

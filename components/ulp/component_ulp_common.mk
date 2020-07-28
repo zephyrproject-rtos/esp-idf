@@ -24,6 +24,19 @@ ULP_PREPROCESSOR_ARGS := \
 
 -include $(ULP_DEP)
 
+# Check the assembler version
+include $(IDF_PATH)/components/ulp/toolchain_ulp_version.mk
+ULP_AS_VER := $(shell $(ULP_AS) --version | sed -E -n 's|GNU assembler \(GNU Binutils\) ([a-z0-9\.-]+)|\1|gp')
+
+$(info Building ULP app $(ULP_APP_NAME))
+$(info ULP assembler version: $(ULP_AS_VER))
+
+ifeq (,$(findstring $(ULP_AS_VER), $(SUPPORTED_ULP_ASSEMBLER_VERSION)))
+$(info WARNING: ULP assembler version $(ULP_AS_VER) is not supported.)
+$(info Expected to see version: $(SUPPORTED_ULP_ASSEMBLER_VERSION))
+$(info Please check ESP-IDF ULP setup instructions and update the toolchain, or proceed at your own risk.)
+endif
+
 # Preprocess LD script used to link ULP program
 $(ULP_LD_SCRIPT): $(ULP_LD_TEMPLATE)
 	$(summary) CPP $(patsubst $(PWD)/%,%,$(CURDIR))/$@
@@ -81,7 +94,7 @@ build: $(COMPONENT_BUILD_DIR)/$(ULP_EXPORTS_HEADER) \
 $(ULP_EXP_DEP_OBJECTS) : $(ULP_EXPORTS_HEADER) $(ULP_SYM)
 
 # Finally, set all the variables processed by the build system. 
-COMPONENT_EXTRA_CLEAN := $(ULP_OBJECTS) \
+COMPONENT_EXTRA_CLEAN += $(ULP_OBJECTS) \
 			$(ULP_LD_SCRIPT) \
 			$(ULP_PREPROCESSED) \
 			$(ULP_ELF) $(ULP_BIN) \
@@ -91,6 +104,6 @@ COMPONENT_EXTRA_CLEAN := $(ULP_OBJECTS) \
 			$(ULP_DEP) \
 			$(ULP_LISTINGS)
 
-COMPONENT_EMBED_FILES := $(COMPONENT_BUILD_DIR)/$(ULP_BIN)
-COMPONENT_ADD_LDFLAGS := -l$(COMPONENT_NAME) -T $(COMPONENT_BUILD_DIR)/$(ULP_EXPORTS_LD)
-COMPONENT_EXTRA_INCLUDES := $(COMPONENT_BUILD_DIR)
+COMPONENT_EMBED_FILES += $(COMPONENT_BUILD_DIR)/$(ULP_BIN)
+COMPONENT_ADD_LDFLAGS += -l$(COMPONENT_NAME) -T $(COMPONENT_BUILD_DIR)/$(ULP_EXPORTS_LD)
+COMPONENT_EXTRA_INCLUDES += $(COMPONENT_BUILD_DIR)
