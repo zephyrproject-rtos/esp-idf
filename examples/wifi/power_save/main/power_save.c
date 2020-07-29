@@ -16,21 +16,21 @@
 #include "freertos/event_groups.h"
 #include "esp_wifi.h"
 #include "esp_log.h"
-#include "esp_event_loop.h"
+#include "esp_event.h"
 #include "esp_pm.h"
 #include "nvs_flash.h"
 
-/*set the ssid and password via "make menuconfig"*/
-#define DEFAULT_SSID CONFIG_WIFI_SSID
-#define DEFAULT_PWD CONFIG_WIFI_PASSWORD
+/*set the ssid and password via "idf.py menuconfig"*/
+#define DEFAULT_SSID CONFIG_EXAMPLE_WIFI_SSID
+#define DEFAULT_PWD CONFIG_EXAMPLE_WIFI_PASSWORD
 
-#define DEFAULT_LISTEN_INTERVAL CONFIG_WIFI_LISTEN_INTERVAL
+#define DEFAULT_LISTEN_INTERVAL CONFIG_EXAMPLE_WIFI_LISTEN_INTERVAL
 
-#if CONFIG_POWER_SAVE_MIN_MODEM
+#if CONFIG_EXAMPLE_POWER_SAVE_MIN_MODEM
 #define DEFAULT_PS_MODE WIFI_PS_MIN_MODEM
-#elif CONFIG_POWER_SAVE_MAX_MODEM
+#elif CONFIG_EXAMPLE_POWER_SAVE_MAX_MODEM
 #define DEFAULT_PS_MODE WIFI_PS_MAX_MODEM
-#elif CONFIG_POWER_SAVE_NONE
+#elif CONFIG_EXAMPLE_POWER_SAVE_NONE
 #define DEFAULT_PS_MODE WIFI_PS_NONE
 #else
 #define DEFAULT_PS_MODE WIFI_PS_NONE
@@ -39,43 +39,39 @@
 
 static const char *TAG = "power_save";
 
-
-static esp_err_t event_handler(void *ctx, system_event_t *event)
+static void event_handler(void* arg, esp_event_base_t event_base,
+                                int32_t event_id, void* event_data)
 {
-    switch(event->event_id) {
-    case SYSTEM_EVENT_STA_START:
-	ESP_LOGI(TAG, "SYSTEM_EVENT_STA_START");
-	ESP_ERROR_CHECK(esp_wifi_connect());
-	break;
-    case SYSTEM_EVENT_STA_GOT_IP:
-	ESP_LOGI(TAG, "SYSTEM_EVENT_STA_GOT_IP");
-	ESP_LOGI(TAG, "got ip:%s\n",
-		ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
-        break;
-    case SYSTEM_EVENT_STA_DISCONNECTED:
-	ESP_LOGI(TAG, "SYSTEM_EVENT_STA_DISCONNECTED");
-	ESP_ERROR_CHECK(esp_wifi_connect());
-	break;
-    default:
-        break;
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
+        esp_wifi_connect();
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+        esp_wifi_connect();
+    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+        ESP_LOGI(TAG, "got ip: " IPSTR, IP2STR(&event->ip_info.ip));
     }
-    return ESP_OK;
 }
 
 /*init wifi as sta and set power save mode*/
 static void wifi_power_save(void)
 {
-    tcpip_adapter_init();
-    ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
-    
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta();
+    assert(sta_netif);
+
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL, NULL));
+
     wifi_config_t wifi_config = {
-	.sta = {
-	    .ssid = DEFAULT_SSID,
-	    .password = DEFAULT_PWD,
-	    .listen_interval = DEFAULT_LISTEN_INTERVAL,
-	},
+        .sta = {
+            .ssid = DEFAULT_SSID,
+            .password = DEFAULT_PWD,
+            .listen_interval = DEFAULT_LISTEN_INTERVAL,
+        },
     };
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
@@ -85,24 +81,27 @@ static void wifi_power_save(void)
     esp_wifi_set_ps(DEFAULT_PS_MODE);
 }
 
-void app_main()
+void app_main(void)
 {
     // Initialize NVS
     esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES) {
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK( ret );
 
 #if CONFIG_PM_ENABLE
-    // Configure dynamic frequency scaling: maximum frequency is set in sdkconfig,
-    // minimum frequency is XTAL.
-    rtc_cpu_freq_t max_freq;
-    rtc_clk_cpu_freq_from_mhz(CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ, &max_freq);
+    // Configure dynamic frequency scaling:
+    // maximum and minimum frequencies are set in sdkconfig,
+    // automatic light sleep is enabled if tickless idle support is enabled.
+#if CONFIG_IDF_TARGET_ESP32
     esp_pm_config_esp32_t pm_config = {
-            .max_cpu_freq = max_freq,
-            .min_cpu_freq = RTC_CPU_FREQ_XTAL,
+#elif CONFIG_IDF_TARGET_ESP32S2
+    esp_pm_config_esp32s2_t pm_config = {
+#endif
+            .max_freq_mhz = CONFIG_EXAMPLE_MAX_CPU_FREQ_MHZ,
+            .min_freq_mhz = CONFIG_EXAMPLE_MIN_CPU_FREQ_MHZ,
 #if CONFIG_FREERTOS_USE_TICKLESS_IDLE
             .light_sleep_enable = true
 #endif

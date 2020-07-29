@@ -4,40 +4,85 @@ SDIO Card Slave Driver
 Overview
 --------
 
-.. note:: At the moment, this code has been proven to work on the Wrover-Kit V3. Earlier versions of the Wrover-Kit
-    and other development kits are electrically incompatible with this code. Functionality on other devboards is untested.
+    The ESP32 SDIO Card peripherals (Host, Slave) shares two sets of pins as below table.
+    The first set is usually occupied by SPI0 bus which is responsible for the SPI flash holding the code to run.
+    This means SDIO slave driver can only runs on the second set of pins while SDIO host is not using it.
 
-The ESP32 SDIO Card peripherals (Host, Slave) shares two sets of pins as below table.
-The first set is usually occupied by SPI0 bus which is responsible for the SPI flash holding the code to run.
-This means SDIO slave driver can only runs on the second set of pins while SDIO host is not using it.
+    The SDIO slave can run under 3 modes: SPI, 1-bit SD and 4-bit SD modes, which
+    is detected automatically by the hardware. According to the SDIO
+    specification, CMD and DAT0-3 lines should be pulled up no matter in 1-bit,
+    4-bit or SPI mode.
 
-+----------+-------+-------+
-| Pin Name | Slot1 | Slot2 |
-+          +-------+-------+
-|          | GPIO Number   |
-+==========+=======+=======+
-| CLK      | 6     | 14    |
-+----------+-------+-------+
-| CMD      | 11    | 15    |
-+----------+-------+-------+
-| DAT0     | 7     | 2     |
-+----------+-------+-------+
-| DAT1     | 8     | 4     |
-+----------+-------+-------+
-| DAT2     | 9     | 12    |
-+----------+-------+-------+
-| DAT3     | 10    | 13    |
-+----------+-------+-------+
+Connections
+^^^^^^^^^^^
 
-The SDIO slave can run under 3 modes: SPI, 1-bit SD and 4-bit SD modes, which is detected automatically by the
-hardware. According to the SDIO specification, the host initialize the slave into SD mode by first sending CMD0 with
-DAT3 pin high, while initialize the slave into SPI mode by sending CMD0 with CS pin (the same pin as DAT3) low. After the
-initialization, the host can enable the 4-bit SD mode by writing CCCR register 0x07 by CMD52. All the bus detection
-process are handled by the slave peripheral.
++----------+---------------+-------+-------+
+| Pin Name | Corresponding | Slot1 | Slot2 |
++          + pins in SPI   +-------+-------+
+|          | mode          | GPIO Number   |
++==========+===============+=======+=======+
+| CLK      | SCLK          | 6     | 14    |
++----------+---------------+-------+-------+
+| CMD      | MOSI          | 11    | 15    |
++----------+---------------+-------+-------+
+| DAT0     | MISO          | 7     | 2     |
++----------+---------------+-------+-------+
+| DAT1     | Interrupt     | 8     | 4     |
++----------+---------------+-------+-------+
+| DAT2     | N.C. (pullup) | 9     | 12    |
++----------+---------------+-------+-------+
+| DAT3     | #CS           | 10    | 13    |
++----------+---------------+-------+-------+
 
-The host has to communicate with the slave by an ESP-slave-specific protocol. The slave driver offers 3 services over
-Function 1 access by CMD52 and CMD53: (1) a sending FIFO and a receiving FIFO, (2) 52 8-bit R/W registers shared by
-host and slave, (3) 16 interrupt sources (8 from host to slave, and 8 from slave to host).
+- 1-bit SD mode: Connect CLK, CMD, DAT0, DAT1 pins and the ground.
+- 4-bit SD mode: Connect all pins and the ground.
+- SPI mode: Connect SCLK, MOSI, MISO, Interrupt, #CS pins and the ground.
+
+.. note:: Please check if CMD and DATA lines D0-D3 of the card are properly
+    pulled up by 10 KOhm resistors. This should be ensured even in 1-bit mode
+    or SPI mode. Most official modules don't offer these pullups internally.
+    If you are using official development boards, check
+    :ref:`compatibility_overview_espressif_hw_sdio` to see whether your
+    development boards have such pullups.
+
+.. note:: Most official modules have conflicts on strapping pins with the
+    SDIO slave function. If you are using a ESP32 module with 3.3 V flash
+    inside, you have to burn the EFUSE when you are developing on the module
+    for the first time. See :ref:`compatibility_overview_espressif_hw_sdio` to
+    see how to make your modules compatible with the SDIO.
+
+    Here is a list for modules/kits with 3.3 V flash:
+
+    - Modules: ESP32-PICO-D4, ESP32-WROOM-32 series (including ESP32-SOLO-1),
+      ESP32-WROVER-B and ESP32-WROVER-IB
+    - Kits: ESP32-PICO-KIT, ESP32-DevKitC (till v4), ESP32-WROVER-KIT
+      (v4.1 (also known as ESP32-WROVER-KIT-VB), v2, v1 (also known as DevKitJ
+      v1))
+
+    You can tell the version of your ESP23-WROVER-KIT version from the module
+    on it: v4.1 are with ESP32-WROVER-B modules, v3 are with ESP32-WROVER
+    modules, while v2 and v1 are with ESP32-WROOM-32 modules.
+
+Refer to :doc:`sd_pullup_requirements` for more technical details of the pullups.
+
+.. toctree::
+    :hidden:
+
+    sd_pullup_requirements
+
+The host initialize the slave into SD mode by first sending CMD0 with DAT3
+pin high, or in SPI mode by sending CMD0 with CS pin (the same pin as DAT3)
+low.
+
+After the initialization, the host can enable the 4-bit SD mode by writing
+CCCR register 0x07 by CMD52. All the bus detection process are handled by the
+slave peripheral.
+
+The host has to communicate with the slave by an ESP-slave-specific protocol.
+The slave driver offers 3 services over Function 1 access by CMD52 and CMD53:
+(1) a sending FIFO and a receiving FIFO, (2) 52 8-bit R/W registers shared by
+host and slave, (3) 16 interrupt sources (8 from host to slave, and 8 from
+slave to host).
 
 Terminology
 ^^^^^^^^^^^
@@ -49,17 +94,17 @@ The SDIO slave driver uses the following terms:
 - Sending: slave to host transfers.
 - Receiving: host to slave transfers.
 
-.. note:: Register names in ESP Rechnical Reference Manual are oriented from the point of view of the host, i.e. 'rx' 
-  registers refer to sending, while 'tx' registers refer to receiving. We're not using `tx` or `rx` in the driver to 
+.. note:: Register names in ESP Rechnical Reference Manual are oriented from the point of view of the host, i.e. 'rx'
+  registers refer to sending, while 'tx' registers refer to receiving. We're not using `tx` or `rx` in the driver to
   avoid ambiguities.
 
 - FIFO: specific address in Function 1 that can be access by CMD53 to read/write large amount of data. The address is
   related to the length requested to read from/write to the slave in a single transfer:
   *requested length* = 0x1F800-address.
 - Ownership: When the driver takes ownership of a buffer, it means the driver can randomly read/write the buffer
-    (mostly by the hardware). The application should not read/write the buffer until the ownership is returned to the
-    application. If the application reads from a buffer owned by a receiving driver, the data read can be random; if
-    the application writes to a buffer owned by a sending driver, the data sent may be corrupted.
+  (usually via DMA). The application should not read/write the buffer until the ownership is returned to the
+  application. If the application reads from a buffer owned by a receiving driver, the data read can be random; if
+  the application writes to a buffer owned by a sending driver, the data sent may be corrupted.
 - Requested length: The length requested in one transfer determined by the FIFO address.
 - Transfer length: The length requested in one transfer determined by the CMD53 byte/block count field.
 
@@ -74,11 +119,19 @@ The SDIO slave driver uses the following terms:
   and from slave to host (called host interrupts below). See more in :ref:`interrupts`.
 - Registers: specific address in Function 1 access by CMD52 or CMD53.
 
-ESP SDIO Slave Protocol
-^^^^^^^^^^^^^^^^^^^^^^^
+Communication with ESP SDIO Slave
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The communication protocol slave used to communicate with the host is ESP32 specific, please refer to
-:doc:`esp_slave_protocol`, or example :example:`peripherals/sdio` for designing a host.
+The host should initialize the ESP32 SDIO slave according to the standard
+SDIO initialization process (Sector 3.1.2 of `SDIO Simplified
+Specification <https://www.sdcard.org/downloads/pls/>`_), which is described
+briefly in :ref:`esp_slave_init`.
+
+Furthermore, there's an ESP32-specific upper-level communication protocol upon the CMD52/CMD53 to
+Func 1. Please refer to :ref:`esp_slave_protocol_layer`. There is also a component
+:doc:`ESP Serial Slave Link </api-reference/protocols/esp_serial_slave_link>`
+for ESP32 master to communicate with ESP32 SDIO slave, see example :example:`peripherals/sdio`
+when programming your host.
 
 .. toctree::
     :hidden:
@@ -160,7 +213,7 @@ set in the ``send_queue_size``. All the buffers are restricted to be no larger t
 mode several buffers can be sent in one transfer, each buffer is still counted as one in the queue.
 
 The application can call ``sdio_slave_transmit`` to send packets. In this case the function returns when the transfer
-is sucessfully done, so the queue is not fully used. When higher effeciency is required, the application can use the
+is successfully done, so the queue is not fully used. When higher effeciency is required, the application can use the
 following functions instead:
 
 1. Pass buffer information (address, length, as well as an ``arg`` indicating the buffer) to ``sdio_slave_send_queue``.
@@ -215,6 +268,7 @@ There are several ways to use the ``arg`` in the queue parameter:
 
        More about this, see :example:`peripherals/sdio`.
 
+
 Application Example
 -------------------
 
@@ -223,5 +277,7 @@ Slave/master communication: :example:`peripherals/sdio`.
 API Reference
 -------------
 
-.. include:: /_build/inc/sdio_slave.inc
+.. include-build-file:: inc/sdio_slave_types.inc
+.. include-build-file:: inc/sdio_slave.inc
+
 

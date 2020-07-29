@@ -1,10 +1,13 @@
-**************************************
+**********************************************
 Standard Setup of Toolchain for Mac OS
-**************************************
+**********************************************
+
 :link_to_translation:`zh_CN:[中文]`
 
 Install Prerequisites
 =====================
+
+ESP-IDF will use the version of Python installed by default on macOS.
 
 - install pip::
 
@@ -12,42 +15,33 @@ Install Prerequisites
 
 - install pyserial::
 
-    sudo pip install pyserial
+    pip install --user pyserial
 
+- install CMake & Ninja build:
 
-Toolchain Setup
-===============
+  - If you have HomeBrew_, you can run::
 
-ESP32 toolchain for macOS is available for download from Espressif website:
+      brew install cmake ninja dfu-util
 
-https://dl.espressif.com/dl/xtensa-esp32-elf-osx-1.22.0-80-g6c4433a-5.2.0.tar.gz
+  - If you have MacPorts_, you can run::
 
-Download this file, then extract it in ``~/esp`` directory::
+      sudo port install cmake ninja dfu-util
 
-    mkdir -p ~/esp
-    cd ~/esp
-    tar -xzf ~/Downloads/xtensa-esp32-elf-osx-1.22.0-80-g6c4433a-5.2.0.tar.gz
+  - Otherwise, consult the CMake_ and Ninja_ home pages for macOS installation downloads.
 
-.. _setup-macos-toolchain-add-it-to-path:
+- It is strongly recommended to also install ccache_ for faster builds. If you have HomeBrew_, this can be done via ``brew install ccache`` or ``sudo port install ccache`` on MacPorts_.
 
-The toolchain will be extracted into ``~/esp/xtensa-esp32-elf/`` directory.
+.. note::
+   If an error like this is shown during any step::
 
-To use it, you will need to update your ``PATH`` environment variable in ``~/.profile`` file. To make ``xtensa-esp32-elf`` available for all terminal sessions, add the following line to your ``~/.profile`` file::
+     xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools), missing xcrun at: /Library/Developer/CommandLineTools/usr/bin/xcrun
 
-    export PATH=$PATH:$HOME/esp/xtensa-esp32-elf/bin
-
-Alternatively, you may create an alias for the above command. This way you can get the toolchain only when you need it. To do this, add different line to your ``~/.profile`` file::
-
-    alias get_esp32="export PATH=$PATH:$HOME/esp/xtensa-esp32-elf/bin"
-
-Then when you need the toolchain you can type ``get_esp32`` on the command line and the toolchain will be added to your ``PATH``.
-
+   Then you will need to install the XCode command line tools to continue. You can install these by running ``xcode-select --install``.
 
 Next Steps
 ==========
 
-To carry on with development environment setup, proceed to section :ref:`get-started-get-esp-idf`.
-
+To carry on with development environment setup, proceed to :ref:`get-started-get-esp-idf`.
 
 Related Documents
 =================
@@ -56,3 +50,9 @@ Related Documents
     :maxdepth: 1
 
     macos-setup-scratch
+
+.. _cmake: https://cmake.org/
+.. _ninja: https://ninja-build.org/
+.. _ccache: https://ccache.samba.org/
+.. _homebrew: https://brew.sh/
+.. _MacPorts: https://www.macports.org/install.php

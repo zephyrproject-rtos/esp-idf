@@ -3,6 +3,19 @@
 #Find all Kconfig files for all components
 COMPONENT_KCONFIGS := $(foreach component,$(COMPONENT_PATHS),$(wildcard $(component)/Kconfig))
 COMPONENT_KCONFIGS_PROJBUILD := $(foreach component,$(COMPONENT_PATHS),$(wildcard $(component)/Kconfig.projbuild))
+COMPONENT_SDKCONFIG_RENAMES := $(foreach component,$(COMPONENT_PATHS),$(wildcard $(component)/sdkconfig.rename))
+COMPONENT_KCONFIGS_SOURCE_FILE:=$(BUILD_DIR_BASE)/kconfigs.in
+COMPONENT_KCONFIGS_PROJBUILD_SOURCE_FILE:=$(BUILD_DIR_BASE)/kconfigs_projbuild.in
+
+
+ifeq ($(OS),Windows_NT)
+# kconfiglib requires Windows-style paths for kconfig files
+COMPONENT_KCONFIGS := $(shell cygpath -m $(COMPONENT_KCONFIGS))
+COMPONENT_KCONFIGS_PROJBUILD := $(shell cygpath -m $(COMPONENT_KCONFIGS_PROJBUILD))
+COMPONENT_SDKCONFIG_RENAMES := $(shell cygpath -m $(COMPONENT_SDKCONFIG_RENAMES))
+COMPONENT_KCONFIGS_SOURCE_FILE := $(shell cygpath -m $(COMPONENT_KCONFIGS_SOURCE_FILE))
+COMPONENT_KCONFIGS_PROJBUILD_SOURCE_FILE := $(shell cygpath -m $(COMPONENT_KCONFIGS_PROJBUILD_SOURCE_FILE))
+endif
 
 #For doing make menuconfig etc
 KCONFIG_TOOL_DIR=$(IDF_PATH)/tools/kconfig
@@ -11,17 +24,24 @@ KCONFIG_TOOL_DIR=$(IDF_PATH)/tools/kconfig
 # unless it's overriden (happens for bootloader)
 SDKCONFIG ?= $(PROJECT_PATH)/sdkconfig
 
+SDKCONFIG_RENAME ?= $(IDF_PATH)/sdkconfig.rename
+
 # SDKCONFIG_DEFAULTS is an optional file containing default
 # overrides (usually used for esp-idf examples)
 SDKCONFIG_DEFAULTS ?= $(PROJECT_PATH)/sdkconfig.defaults
 
-# Workaround to run make parallel (-j). mconf and conf cannot be made simultaneously
-$(KCONFIG_TOOL_DIR)/mconf: $(KCONFIG_TOOL_DIR)/conf
+# Workaround to run make parallel (-j). mconf-idf and conf-idf cannot be made simultaneously
+$(KCONFIG_TOOL_DIR)/mconf-idf: $(KCONFIG_TOOL_DIR)/conf-idf
 
 # reset MAKEFLAGS as the menuconfig makefile uses implicit compile rules
-$(KCONFIG_TOOL_DIR)/mconf $(KCONFIG_TOOL_DIR)/conf: $(wildcard $(KCONFIG_TOOL_DIR)/*.c)
+$(KCONFIG_TOOL_DIR)/mconf-idf $(KCONFIG_TOOL_DIR)/conf-idf: $(wildcard $(KCONFIG_TOOL_DIR)/*.c) $(wildcard $(KCONFIG_TOOL_DIR)/*.y)
+ifeq ($(OS),Windows_NT)
+	# mconf-idf is used only in MSYS
 	MAKEFLAGS="" CC=$(HOSTCC) LD=$(HOSTLD) \
 	$(MAKE) -C $(KCONFIG_TOOL_DIR)
+else
+	@echo "mconf-idf is not required on this platform"
+endif
 
 ifeq ("$(wildcard $(SDKCONFIG))","")
 # if no configuration file is present we need a rule for it
@@ -36,14 +56,72 @@ $(SDKCONFIG): defconfig
 endif
 endif
 
-# macro for the commands to run kconfig tools conf or mconf.
-# $1 is the name (& args) of the conf tool to run
-define RunConf
+ifeq ("$(PYTHON)","")
+# fallback value when menuconfig is called without a build directory and sdkconfig file
+PYTHON=python
+endif
+
+SDKCONFIG_DEFAULTS_FILES := $(foreach f,$(SDKCONFIG_DEFAULTS),$(wildcard $(f)))
+# for each sdkconfig.defaults file, also add sdkconfig.defaults.IDF_TARGET, if it exists
+SDKCONFIG_DEFAULTS_FILES += $(foreach f,$(SDKCONFIG_DEFAULTS_FILES),$(wildcard $(f).$(IDF_TARGET)))
+
+ifeq ($(OS),Windows_NT)
+# -i is for ignore missing arguments in case SDKCONFIG_DEFAULTS_FILES is empty
+SDKCONFIG_DEFAULTS_FILES := $(shell cygpath -i -m $(SDKCONFIG_DEFAULTS_FILES))
+endif
+DEFAULTS_ARG := $(foreach f,$(SDKCONFIG_DEFAULTS_FILES),--defaults $(f))
+
+prepare_kconfig_files:
+	mkdir -p $(BUILD_DIR_BASE)
+	$(PYTHON) $(IDF_PATH)/tools/kconfig_new/prepare_kconfig_files.py \
+		--env "COMPONENT_KCONFIGS=$(strip $(COMPONENT_KCONFIGS))" \
+		--env "COMPONENT_KCONFIGS_PROJBUILD=$(strip $(COMPONENT_KCONFIGS_PROJBUILD))" \
+		--env "COMPONENT_KCONFIGS_SOURCE_FILE=$(COMPONENT_KCONFIGS_SOURCE_FILE)" \
+		--env "COMPONENT_KCONFIGS_PROJBUILD_SOURCE_FILE=$(COMPONENT_KCONFIGS_PROJBUILD_SOURCE_FILE)"
+
+# macro for running confgen.py
+define RunConfGen
+	mkdir -p $(BUILD_DIR_BASE)/include/config
+	$(PYTHON) $(IDF_PATH)/tools/kconfig_new/confgen.py \
+		--kconfig $(IDF_PATH)/Kconfig \
+		--config $(SDKCONFIG) \
+		--sdkconfig-rename $(SDKCONFIG_RENAME) \
+		--env "COMPONENT_KCONFIGS=$(strip $(COMPONENT_KCONFIGS))" \
+		--env "COMPONENT_KCONFIGS_PROJBUILD=$(strip $(COMPONENT_KCONFIGS_PROJBUILD))" \
+		--env "COMPONENT_KCONFIGS_SOURCE_FILE=$(COMPONENT_KCONFIGS_SOURCE_FILE)" \
+		--env "COMPONENT_KCONFIGS_PROJBUILD_SOURCE_FILE=$(COMPONENT_KCONFIGS_PROJBUILD_SOURCE_FILE)" \
+		--env "COMPONENT_SDKCONFIG_RENAMES=$(strip $(COMPONENT_SDKCONFIG_RENAMES))" \
+		--env "IDF_CMAKE=n" \
+		$(DEFAULTS_ARG) \
+		--output config ${SDKCONFIG} \
+		--output makefile $(SDKCONFIG_MAKEFILE) \
+		--output header $(BUILD_DIR_BASE)/include/sdkconfig.h \
+		$1
+endef
+
+export MENUCONFIG_STYLE ?= aquatic
+
+ifeq ($(OS),Windows_NT)
+MENUCONFIG_CMD := $(KCONFIG_TOOL_DIR)/mconf-idf
+else
+MENUCONFIG_CMD := $(PYTHON) $(IDF_PATH)/tools/kconfig_new/menuconfig.py
+endif
+
+.PHONY: term_check
+term_check:
+ifneq ($(OS),Windows_NT)
+	${PYTHON} ${IDF_PATH}/tools/check_term.py
+endif
+
+# macro for running menuconfig
+define RunMenuConf
 	mkdir -p $(BUILD_DIR_BASE)/include/config
 	cd $(BUILD_DIR_BASE); KCONFIG_AUTOHEADER=$(abspath $(BUILD_DIR_BASE)/include/sdkconfig.h) \
-	COMPONENT_KCONFIGS="$(COMPONENT_KCONFIGS)" KCONFIG_CONFIG=$(SDKCONFIG) \
-	COMPONENT_KCONFIGS_PROJBUILD="$(COMPONENT_KCONFIGS_PROJBUILD)" \
-	$(KCONFIG_TOOL_DIR)/$1 $(IDF_PATH)/Kconfig
+	KCONFIG_CONFIG=$(SDKCONFIG) \
+	COMPONENT_KCONFIGS_SOURCE_FILE="$(COMPONENT_KCONFIGS_SOURCE_FILE)" \
+	COMPONENT_KCONFIGS_PROJBUILD_SOURCE_FILE="$(COMPONENT_KCONFIGS_PROJBUILD_SOURCE_FILE)" \
+	IDF_CMAKE=n \
+	$(MENUCONFIG_CMD) $(IDF_PATH)/Kconfig
 endef
 
 ifndef MAKE_RESTARTS
@@ -58,7 +136,7 @@ ifndef MAKE_RESTARTS
 # depend on any prerequisite that may cause a make restart as part of
 # the prerequisite's own recipe.
 
-menuconfig: $(KCONFIG_TOOL_DIR)/mconf
+menuconfig: $(KCONFIG_TOOL_DIR)/mconf-idf | check_python_dependencies term_check prepare_kconfig_files
 	$(summary) MENUCONFIG
 ifdef BATCH_BUILD
 	@echo "Can't run interactive configuration inside non-interactive build process."
@@ -67,25 +145,23 @@ ifdef BATCH_BUILD
 	@echo "See esp-idf documentation for more details."
 	@exit 1
 else
-	$(call RunConf,mconf)
+	$(call RunConfGen,--dont-write-deprecated)
+	# RunConfGen before menuconfig ensures that deprecated options won't be ignored (they've got renamed)
+	$(call RunMenuConf)
+	# RunConfGen after menuconfig ensures that deprecated options are appended to $(SDKCONFIG) for backward compatibility
+	$(call RunConfGen,)
 endif
 
 # defconfig creates a default config, based on SDKCONFIG_DEFAULTS if present
-defconfig: $(KCONFIG_TOOL_DIR)/conf
+defconfig: | check_python_dependencies prepare_kconfig_files
 	$(summary) DEFCONFIG
-ifneq ("$(wildcard $(SDKCONFIG_DEFAULTS))","")
-	cat $(SDKCONFIG_DEFAULTS) >> $(SDKCONFIG)  # append defaults to sdkconfig, will override existing values
-endif
-	$(call RunConf,conf --olddefconfig)
+	$(call RunConfGen,)
 
 # if neither defconfig or menuconfig are requested, use the GENCONFIG rule to
 # ensure generated config files are up to date
-$(SDKCONFIG_MAKEFILE) $(BUILD_DIR_BASE)/include/sdkconfig.h: $(KCONFIG_TOOL_DIR)/conf $(SDKCONFIG) $(COMPONENT_KCONFIGS) $(COMPONENT_KCONFIGS_PROJBUILD) | $(call prereq_if_explicit,defconfig) $(call prereq_if_explicit,menuconfig)
+$(SDKCONFIG_MAKEFILE) $(BUILD_DIR_BASE)/include/sdkconfig.h: $(SDKCONFIG) $(COMPONENT_KCONFIGS) $(COMPONENT_KCONFIGS_PROJBUILD) | check_python_dependencies prepare_kconfig_files $(call prereq_if_explicit,defconfig) $(call prereq_if_explicit,menuconfig)
 	$(summary) GENCONFIG
-ifdef BATCH_BUILD  # can't prompt for new config values like on terminal
-	$(call RunConf,conf --olddefconfig)
-endif
-	$(call RunConf,conf --silentoldconfig)
+	$(call RunConfGen,)
 	touch $(SDKCONFIG_MAKEFILE) $(BUILD_DIR_BASE)/include/sdkconfig.h  # ensure newer than sdkconfig
 
 else  # "$(MAKE_RESTARTS)" != ""
@@ -97,5 +173,8 @@ endif
 .PHONY: config-clean defconfig menuconfig
 config-clean:
 	$(summary) RM CONFIG
+ifeq ($(OS),Windows_NT)
 	MAKEFLAGS="" $(MAKE) -C $(KCONFIG_TOOL_DIR) clean
-	rm -rf $(BUILD_DIR_BASE)/include/config $(BUILD_DIR_BASE)/include/sdkconfig.h
+endif
+	rm -rf $(BUILD_DIR_BASE)/include/config $(BUILD_DIR_BASE)/include/sdkconfig.h \
+		$(COMPONENT_KCONFIGS_SOURCE_FILE) $(COMPONENT_KCONFIGS_PROJBUILD_SOURCE_FILE)

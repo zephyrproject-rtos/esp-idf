@@ -1,4 +1,4 @@
-// Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD
+// Copyright 2015-2019 Espressif Systems (Shanghai) PTE LTD
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,17 +22,23 @@
 #include <sys/signal.h>
 #include <sys/unistd.h>
 #include <sys/reent.h>
-#include "rom/libc_stubs.h"
 #include "esp_vfs.h"
 #include "esp_newlib.h"
 #include "sdkconfig.h"
+#include "soc/soc_caps.h"
+
+#if CONFIG_IDF_TARGET_ESP32
+#include "esp32/rom/libc_stubs.h"
+#elif CONFIG_IDF_TARGET_ESP32S2
+#include "esp32s2/rom/libc_stubs.h"
+#endif
 
 static struct _reent s_reent;
 
 extern int _printf_float(struct _reent *rptr,
                void *pdata,
                FILE * fp,
-               int (*pfunc) (struct _reent *, FILE *, _CONST char *, size_t len),
+               int (*pfunc) (struct _reent *, FILE *, const char *, size_t len),
                va_list * ap);
 
 
@@ -41,6 +47,10 @@ extern int _scanf_float(struct _reent *rptr,
               FILE *fp,
               va_list *ap);
 
+static void raise_r_stub(struct _reent *rptr)
+{
+    _raise_r(rptr, 0);
+}
 
 static struct syscall_stub_table s_stub_table = {
     .__getreent = &__getreent,
@@ -50,27 +60,27 @@ static struct syscall_stub_table s_stub_table = {
     ._calloc_r = &_calloc_r,
     ._abort = &abort,
     ._system_r = &_system_r,
-    ._rename_r = &esp_vfs_rename,
+    ._rename_r = &_rename_r,
     ._times_r = &_times_r,
     ._gettimeofday_r = &_gettimeofday_r,
-    ._raise_r = (void (*)(struct _reent *r)) &_raise_r,
-    ._unlink_r = &esp_vfs_unlink,
-    ._link_r = &esp_vfs_link,
-    ._stat_r = &esp_vfs_stat,
-    ._fstat_r = &esp_vfs_fstat,
+    ._raise_r = &raise_r_stub,
+    ._unlink_r = &_unlink_r,
+    ._link_r = &_link_r,
+    ._stat_r = &_stat_r,
+    ._fstat_r = &_fstat_r,
     ._sbrk_r = &_sbrk_r,
     ._getpid_r = &_getpid_r,
     ._kill_r = &_kill_r,
     ._exit_r = NULL,    // never called in ROM
-    ._close_r = &esp_vfs_close,
-    ._open_r = &esp_vfs_open,
-    ._write_r = (int (*)(struct _reent *r, int, const void *, int)) &esp_vfs_write,
-    ._lseek_r = (int (*)(struct _reent *r, int, int, int)) &esp_vfs_lseek,
-    ._read_r = (int (*)(struct _reent *r, int, void *, int)) &esp_vfs_read,
+    ._close_r = &_close_r,
+    ._open_r = &_open_r,
+    ._write_r = (int (*)(struct _reent *r, int, const void *, int)) &_write_r,
+    ._lseek_r = (int (*)(struct _reent *r, int, int, int)) &_lseek_r,
+    ._read_r = (int (*)(struct _reent *r, int, void *, int)) &_read_r,
     ._lock_init = &_lock_init,
     ._lock_init_recursive = &_lock_init_recursive,
     ._lock_close = &_lock_close,
-    ._lock_close_recursive = &_lock_close,
+    ._lock_close_recursive = &_lock_close_recursive,
     ._lock_acquire = &_lock_acquire,
     ._lock_acquire_recursive = &_lock_acquire_recursive,
     ._lock_try_acquire = &_lock_try_acquire,
@@ -86,10 +96,12 @@ static struct syscall_stub_table s_stub_table = {
 #endif
 };
 
-void esp_setup_syscall_table()
+void esp_setup_syscall_table(void)
 {
     syscall_table_ptr_pro = &s_stub_table;
+#if SOC_CPU_CORES_NUM == 2
     syscall_table_ptr_app = &s_stub_table;
+#endif
     _GLOBAL_REENT = &s_reent;
     environ = malloc(sizeof(char*));
     environ[0] = NULL;

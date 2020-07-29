@@ -4,7 +4,7 @@ Heap Memory Debugging
 Overview
 --------
 
-ESP-IDF integrates tools for requesting `heap information`_, `detecting heap corruption <heap corruption detection>`_, and `tracing memory leaks <heap tracing>`_. These can help track down memory-related bugs.
+ESP-IDF integrates tools for requesting :ref:`heap information <heap-information>`, :ref:`detecting heap corruption <heap-corruption>`, and :ref:`tracing memory leaks <heap-tracing>`. These can help track down memory-related bugs.
 
 For general information about the heap memory allocator, see the :doc:`Heap Memory Allocation </api-reference/system/mem_alloc>` page.
 
@@ -38,12 +38,39 @@ Heap corruption detection allows you to detect various types of heap memory erro
 Assertions
 ^^^^^^^^^^
 
-The heap implementation (``multi_heap.c``, etc.) includes a lot of assertions which will fail if the heap memory is corrupted. To detect heap corruption most effectively, ensure that assertions are enabled in ``make menuconfig`` under ``Compiler options``.
+The heap implementation (``multi_heap.c``, etc.) includes a lot of assertions which will fail if the heap memory is corrupted. To detect heap corruption most effectively, ensure that assertions are enabled in the project configuration menu under ``Compiler options`` -> :ref:`CONFIG_COMPILER_OPTIMIZATION_ASSERTION_LEVEL`.
 
 If a heap integrity assertion fails, a line will be printed like ``CORRUPT HEAP: multi_heap.c:225 detected at 0x3ffbb71c``. The memory address which is printed is the address of the heap structure which has corrupt content.
 
 It's also possible to manually check heap integrity by calling :cpp:func:`heap_caps_check_integrity_all` or related functions. This function checks all of requested heap memory for integrity, and can be used even if assertions are disabled. If the integrity check prints an error, it will also contain the address(es) of corrupt heap structures.
 
+Memory Allocation Failed Hook
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Users can use :cpp:func:`heap_caps_register_failed_alloc_callback` to register a callback that will be invoked every time a allocation
+operation fails.
+
+Additionaly user can enable a generation of a system abort if allocation operation fails by following the steps below:
+- In the project configuration menu, navigate to ``Component config`` -> ``Heap Memory Debugging`` and select ``Abort if memory allocation fails`` option (see :ref:`CONFIG_HEAP_ABORT_WHEN_ALLOCATION_FAILS`).
+
+The example below show how to register a allocation failure callback::
+
+  #include "esp_heap_caps.h"
+
+  void heap_caps_alloc_failed_hook(size_t requested_size, uint32_t caps, const char *function_name) 
+  {
+    printf("%s was called but failed to allocate %d bytes with 0x%X capabilities. \n",function_name, requested_size, caps);
+  }
+
+  void app_main()
+  {
+      ...
+      esp_err_t error = heap_caps_register_failed_alloc_callback(heap_caps_alloc_failed_hook);
+      ...
+      void *ptr = heap_caps_malloc(allocation_size, MALLOC_CAP_DEFAULT);
+      ...
+  }
+  
 Finding Heap Corruption
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -62,7 +89,7 @@ Configuration
 
 Temporarily increasing the heap corruption detection level can give more detailed information about heap corruption errors.
 
-In ``make menuconfig``, under ``Component config`` there is a menu ``Heap memory debugging``. The setting :ref:`CONFIG_HEAP_CORRUPTION_DETECTION` can be set to one of three levels:
+In the project configuration menu, under ``Component config`` there is a menu ``Heap memory debugging``. The setting :ref:`CONFIG_HEAP_CORRUPTION_DETECTION` can be set to one of three levels:
 
 Basic (no poisoning)
 ++++++++++++++++++++
@@ -117,16 +144,25 @@ Calls to :cpp:func:`heap_caps_check_integrity` may print errors relating to 0xFE
 - For free heap blocks, the checker expects to find all bytes set to 0xFE. Any other values indicate a use-after-free bug where free memory has been incorrectly overwritten.
 - For allocated heap blocks, the behaviour is the same as for `Light Impact` mode. The canary bytes 0xABBA1234 and 0xBAAD5678 are checked at the head and tail of each allocated buffer, and any variation indicates a buffer overrun/underrun.
 
+.. _heap-task-tracking:
+
+Heap Task Tracking
+------------------
+
+Heap Task Tracking can be used to get per task info for heap memory allocation.
+Application has to specify the heap capabilities for which the heap allocation is to be tracked.
+
+Example code is provided in :example:`system/heap_task_tracking`
+
 .. _heap-tracing:
 
 Heap Tracing
 ------------
 
-Heap Tracing allows tracing of code which allocates/frees memory.
+Heap Tracing allows tracing of code which allocates/frees memory. Two tracing modes are supported:
 
-.. note::
-
-   Heap tracing "standalone" mode is currently implemented, meaning that tracing does not require any external hardware but uses internal memory to hold trace data. Heap tracing via JTAG trace port is also planned.
+- Standalone. In this mode trace data are kept on-board, so the size of gathered information is limited by the buffer assigned for that purposes. Analysis is done by the on-board code. There are a couple of APIs available for accessing and dumping collected info.
+- Host-based. This mode does not have the limitation of the standalone mode, because trace data are sent to the host over JTAG connection using app_trace library. Later on they can be analysed using special tools.
 
 Heap tracing can perform two functions:
 
@@ -136,11 +172,15 @@ Heap tracing can perform two functions:
 How To Diagnose Memory Leaks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If you suspect a memory leak, the first step is to figure out which part of the program is leaking memory. Use the :cpp:func:`xPortGetFreeHeapSize`, :cpp:func:`heap_caps_get_free`, and related functions to track memory use over the life of the application. Try to narrow the leak down to a single function or sequence of functions where free memory always decreases and never recovers.
+If you suspect a memory leak, the first step is to figure out which part of the program is leaking memory. Use the :cpp:func:`xPortGetFreeHeapSize`, :cpp:func:`heap_caps_get_free_size`, or :ref:`related functions <heap-information>` to track memory use over the life of the application. Try to narrow the leak down to a single function or sequence of functions where free memory always decreases and never recovers.
+
+
+Standalone Mode
++++++++++++++++
 
 Once you've identified the code which you think is leaking:
 
-- Under ``make menuconfig``, navigate to ``Component settings`` -> ``Heap Memory Debugging`` and set :ref:`CONFIG_HEAP_TRACING`.
+- In the project configuration menu, navigate to ``Component settings`` -> ``Heap Memory Debugging`` -> ``Heap tracing`` and select ``Standalone`` option (see :ref:`CONFIG_HEAP_TRACING_DEST`).
 - Call the function :cpp:func:`heap_trace_init_standalone` early in the program, to register a buffer which can be used to record the memory trace.
 - Call the function :cpp:func:`heap_trace_start` to begin recording all mallocs/frees in the system. Call this immediately before the piece of code which you suspect is leaking memory.
 - Call the function :cpp:func:`heap_trace_stop` to stop the trace once the suspect piece of code has finished executing.
@@ -165,9 +205,9 @@ An example::
   void some_function()
   {
       ESP_ERROR_CHECK( heap_trace_start(HEAP_TRACE_LEAKS) );
-      
+
       do_something_you_suspect_is_leaking();
-      
+
       ESP_ERROR_CHECK( heap_trace_stop() );
       heap_trace_dump();
       ...
@@ -189,7 +229,7 @@ The output from the heap trace will look something like this::
   40 bytes 'leaked' in trace (2 allocations)
   total allocations 2 total frees 0
 
-(Above example output is using :doc:`IDF Monitor </get-started/idf-monitor>` to automatically decode PC addresses to their source files & line number.)
+(Above example output is using :doc:`IDF Monitor </api-guides/tools/idf-monitor>` to automatically decode PC addresses to their source files & line number.)
 
 The first line indicates how many allocation entries are in the buffer, compared to its total size.
 
@@ -202,22 +242,178 @@ In ``HEAP_TRACE_LEAKS`` mode, for each traced memory allocation which has not al
 - ``caller 0x...`` gives the call stack of the call to malloc()/free(), as a list of PC addresses.
   These can be decoded to source files and line numbers, as shown above.
 
-The depth of the call stack recorded for each trace entry can be configured in ``make menuconfig``, under ``Heap Memory Debugging`` -> ``Enable heap tracing`` -> ``Heap tracing stack depth``. Up to 10 stack frames can be recorded for each allocation (the default is 2). Each additional stack frame increases the memory usage of each ``heap_trace_record_t`` record by eight bytes.
+The depth of the call stack recorded for each trace entry can be configured in the project configuration menu, under ``Heap Memory Debugging`` -> ``Enable heap tracing`` -> ``Heap tracing stack depth``. Up to 10 stack frames can be recorded for each allocation (the default is 2). Each additional stack frame increases the memory usage of each ``heap_trace_record_t`` record by eight bytes.
 
 Finally, the total number of 'leaked' bytes (bytes allocated but not freed while trace was running) is printed, and the total number of allocations this represents.
 
 A warning will be printed if the trace buffer was not large enough to hold all the allocations which happened. If you see this warning, consider either shortening the tracing period or increasing the number of records in the trace buffer.
 
+
+Host-Based Mode
++++++++++++++++
+
+Once you've identified the code which you think is leaking:
+
+- In the project configuration menu, navigate to ``Component settings`` -> ``Heap Memory Debugging`` -> :ref:`CONFIG_HEAP_TRACING_DEST` and select ``Host-Based``.
+- In the project configuration menu, navigate to ``Component settings`` -> ``Application Level Tracing`` -> :ref:`CONFIG_APPTRACE_DESTINATION` and select ``Trace memory``.
+- In the project configuration menu, navigate to ``Component settings`` -> ``Application Level Tracing`` -> ``FreeRTOS SystemView Tracing`` and enable :ref:`CONFIG_SYSVIEW_ENABLE`.
+- Call the function :cpp:func:`heap_trace_init_tohost` early in the program, to initialize JTAG heap tracing module.
+- Call the function :cpp:func:`heap_trace_start` to begin recording all mallocs/frees in the system. Call this immediately before the piece of code which you suspect is leaking memory.
+  In host-based mode argument to this function is ignored and heap tracing module behaves like ``HEAP_TRACE_ALL`` was passed: all allocations and deallocations are sent to the host.
+- Call the function :cpp:func:`heap_trace_stop` to stop the trace once the suspect piece of code has finished executing.
+
+An example::
+
+  #include "esp_heap_trace.h"
+
+  ...
+
+  void app_main()
+  {
+      ...
+      ESP_ERROR_CHECK( heap_trace_init_tohost() );
+      ...
+  }
+
+  void some_function()
+  {
+      ESP_ERROR_CHECK( heap_trace_start(HEAP_TRACE_LEAKS) );
+
+      do_something_you_suspect_is_leaking();
+
+      ESP_ERROR_CHECK( heap_trace_stop() );
+      ...
+  }
+
+To gather and analyse heap trace do the following on the host:
+
+1.  Build the program and download it to the target as described in :ref:`Getting Started Guide <get-started-build>`.
+
+2.  Run OpenOCD (see :doc:`JTAG Debugging </api-guides/jtag-debugging/index>`).
+
+.. note::
+
+    In order to use this feature you need OpenOCD version `v0.10.0-esp32-20181105` or later.
+
+3. You can use GDB to start and/or stop tracing automatically. To do this you need to prepare special ``gdbinit`` file::
+
+    target remote :3333
+
+    mon reset halt
+    flushregs
+
+    tb heap_trace_start
+    commands
+    mon esp32 sysview start file:///tmp/heap.svdat
+    c
+    end
+
+    tb heap_trace_stop
+    commands
+    mon esp32 sysview stop
+    end
+
+    c
+
+Using this file GDB will connect to the target, reset it, and start tracing when program hits breakpoint at :cpp:func:`heap_trace_start`. Trace data will be saved to ``/tmp/heap_log.svdat``. Tracing will be stopped when program hits breakpoint at :cpp:func:`heap_trace_stop`.
+
+4. Run GDB using the following command ``xtensa-{IDF_TARGET_TOOLCHAIN_NAME}-elf-gdb -x gdbinit </path/to/program/elf>``
+
+5. Quit GDB when program stops at :cpp:func:`heap_trace_stop`. Trace data are saved in ``/tmp/heap.svdat``
+
+6. Run processing script ``$IDF_PATH/tools/esp_app_trace/sysviewtrace_proc.py -p -b </path/to/program/elf> /tmp/heap_log.svdat``
+
+The output from the heap trace will look something like this::
+
+  Parse trace from '/tmp/heap.svdat'...
+  Stop parsing trace. (Timeout 0.000000 sec while reading 1 bytes!)
+  Process events from '['/tmp/heap.svdat']'...
+  [0.002244575] HEAP: Allocated 1 bytes @ 0x3ffaffd8 from task "alloc" on core 0 by:
+  /home/user/projects/esp/esp-idf/examples/system/sysview_tracing_heap_log/main/sysview_heap_log.c:47
+  /home/user/projects/esp/esp-idf/components/freertos/port.c:355 (discriminator 1)
+
+  [0.002258425] HEAP: Allocated 2 bytes @ 0x3ffaffe0 from task "alloc" on core 0 by:
+  /home/user/projects/esp/esp-idf/examples/system/sysview_tracing_heap_log/main/sysview_heap_log.c:48
+  /home/user/projects/esp/esp-idf/components/freertos/port.c:355 (discriminator 1)
+
+  [0.002563725] HEAP: Freed bytes @ 0x3ffaffe0 from task "free" on core 0 by:
+  /home/user/projects/esp/esp-idf/examples/system/sysview_tracing_heap_log/main/sysview_heap_log.c:31 (discriminator 9)
+  /home/user/projects/esp/esp-idf/components/freertos/port.c:355 (discriminator 1)
+
+  [0.002782950] HEAP: Freed bytes @ 0x3ffb40b8 from task "main" on core 0 by:
+  /home/user/projects/esp/esp-idf/components/freertos/tasks.c:4590
+  /home/user/projects/esp/esp-idf/components/freertos/tasks.c:4590
+
+  [0.002798700] HEAP: Freed bytes @ 0x3ffb50bc from task "main" on core 0 by:
+  /home/user/projects/esp/esp-idf/components/freertos/tasks.c:4590
+  /home/user/projects/esp/esp-idf/components/freertos/tasks.c:4590
+
+  [0.102436025] HEAP: Allocated 2 bytes @ 0x3ffaffe0 from task "alloc" on core 0 by:
+  /home/user/projects/esp/esp-idf/examples/system/sysview_tracing_heap_log/main/sysview_heap_log.c:47
+  /home/user/projects/esp/esp-idf/components/freertos/port.c:355 (discriminator 1)
+
+  [0.102449800] HEAP: Allocated 4 bytes @ 0x3ffaffe8 from task "alloc" on core 0 by:
+  /home/user/projects/esp/esp-idf/examples/system/sysview_tracing_heap_log/main/sysview_heap_log.c:48
+  /home/user/projects/esp/esp-idf/components/freertos/port.c:355 (discriminator 1)
+
+  [0.102666150] HEAP: Freed bytes @ 0x3ffaffe8 from task "free" on core 0 by:
+  /home/user/projects/esp/esp-idf/examples/system/sysview_tracing_heap_log/main/sysview_heap_log.c:31 (discriminator 9)
+  /home/user/projects/esp/esp-idf/components/freertos/port.c:355 (discriminator 1)
+
+  [0.202436200] HEAP: Allocated 3 bytes @ 0x3ffaffe8 from task "alloc" on core 0 by:
+  /home/user/projects/esp/esp-idf/examples/system/sysview_tracing_heap_log/main/sysview_heap_log.c:47
+  /home/user/projects/esp/esp-idf/components/freertos/port.c:355 (discriminator 1)
+
+  [0.202451725] HEAP: Allocated 6 bytes @ 0x3ffafff0 from task "alloc" on core 0 by:
+  /home/user/projects/esp/esp-idf/examples/system/sysview_tracing_heap_log/main/sysview_heap_log.c:48
+  /home/user/projects/esp/esp-idf/components/freertos/port.c:355 (discriminator 1)
+
+  [0.202667075] HEAP: Freed bytes @ 0x3ffafff0 from task "free" on core 0 by:
+  /home/user/projects/esp/esp-idf/examples/system/sysview_tracing_heap_log/main/sysview_heap_log.c:31 (discriminator 9)
+  /home/user/projects/esp/esp-idf/components/freertos/port.c:355 (discriminator 1)
+
+  [0.302436000] HEAP: Allocated 4 bytes @ 0x3ffafff0 from task "alloc" on core 0 by:
+  /home/user/projects/esp/esp-idf/examples/system/sysview_tracing_heap_log/main/sysview_heap_log.c:47
+  /home/user/projects/esp/esp-idf/components/freertos/port.c:355 (discriminator 1)
+
+  [0.302451475] HEAP: Allocated 8 bytes @ 0x3ffb40b8 from task "alloc" on core 0 by:
+  /home/user/projects/esp/esp-idf/examples/system/sysview_tracing_heap_log/main/sysview_heap_log.c:48
+  /home/user/projects/esp/esp-idf/components/freertos/port.c:355 (discriminator 1)
+
+  [0.302667500] HEAP: Freed bytes @ 0x3ffb40b8 from task "free" on core 0 by:
+  /home/user/projects/esp/esp-idf/examples/system/sysview_tracing_heap_log/main/sysview_heap_log.c:31 (discriminator 9)
+  /home/user/projects/esp/esp-idf/components/freertos/port.c:355 (discriminator 1)
+
+  Processing completed.
+  Processed 1019 events
+  =============== HEAP TRACE REPORT ===============
+  Processed 14 heap events.
+  [0.002244575] HEAP: Allocated 1 bytes @ 0x3ffaffd8 from task "alloc" on core 0 by:
+  /home/user/projects/esp/esp-idf/examples/system/sysview_tracing_heap_log/main/sysview_heap_log.c:47
+  /home/user/projects/esp/esp-idf/components/freertos/port.c:355 (discriminator 1)
+
+  [0.102436025] HEAP: Allocated 2 bytes @ 0x3ffaffe0 from task "alloc" on core 0 by:
+  /home/user/projects/esp/esp-idf/examples/system/sysview_tracing_heap_log/main/sysview_heap_log.c:47
+  /home/user/projects/esp/esp-idf/components/freertos/port.c:355 (discriminator 1)
+
+  [0.202436200] HEAP: Allocated 3 bytes @ 0x3ffaffe8 from task "alloc" on core 0 by:
+  /home/user/projects/esp/esp-idf/examples/system/sysview_tracing_heap_log/main/sysview_heap_log.c:47
+  /home/user/projects/esp/esp-idf/components/freertos/port.c:355 (discriminator 1)
+
+  [0.302436000] HEAP: Allocated 4 bytes @ 0x3ffafff0 from task "alloc" on core 0 by:
+  /home/user/projects/esp/esp-idf/examples/system/sysview_tracing_heap_log/main/sysview_heap_log.c:47
+  /home/user/projects/esp/esp-idf/components/freertos/port.c:355 (discriminator 1)
+
+  Found 10 leaked bytes in 4 blocks.
+
 Heap Tracing To Find Heap Corruption
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-When a region in heap is corrupted, it may be from some other part of the program which allocated memory at a nearby address.
+Heap tracing can also be used to help track down heap corruption. When a region in heap is corrupted, it may be from some other part of the program which allocated memory at a nearby address.
 
-If you have some idea at what time the corruption occured, enabling heap tracing in ``HEAP_TRACE_ALL`` mode allows you to record all of the functions which allocated memory, and the addresses where they were corrupted.
+If you have some idea at what time the corruption occurred, enabling heap tracing in ``HEAP_TRACE_ALL`` mode allows you to record all of the functions which allocated memory, and the addresses of the allocations.
 
-Using heap tracing in this way is very similar to memory leak detection as described above. For memory which is allocated and not freed, the output 
-
-Heap tracing can also be used to help track down heap corruption. By using 
+Using heap tracing in this way is very similar to memory leak detection as described above. For memory which is allocated and not freed, the output is the same. However, records will also be shown for memory which has been freed.
 
 Performance Impact
 ^^^^^^^^^^^^^^^^^^
@@ -234,6 +430,7 @@ Not everything printed by :cpp:func:`heap_trace_dump` is necessarily a memory le
 - Any memory which is allocated after :cpp:func:`heap_trace_start` but then freed after :cpp:func:`heap_trace_stop` will appear in the leak dump.
 - Allocations may be made by other tasks in the system. Depending on the timing of these tasks, it's quite possible this memory is freed after :cpp:func:`heap_trace_stop` is called.
 - The first time a task uses stdio - for example, when it calls ``printf()`` - a lock (RTOS mutex semaphore) is allocated by the libc. This allocation lasts until the task is deleted.
+- Certain uses of ``printf()``, such as printing floating point numbers, will allocate some memory from the heap on demand. These allocations last until the task is deleted.
 - The Bluetooth, WiFi, and TCP/IP libraries will allocate heap memory buffers to handle incoming or outgoing data. These memory buffers are usually short lived, but some may be shown in the heap leak trace if the data was received/transmitted by the lower levels of the network while the leak trace was running.
 - TCP connections will continue to use some memory after they are closed, because of the ``TIME_WAIT`` state. After the ``TIME_WAIT`` period has completed, this memory will be freed.
 
@@ -242,4 +439,4 @@ One way to differentiate between "real" and "false positive" memory leaks is to 
 API Reference - Heap Tracing
 ----------------------------
 
-.. include:: /_build/inc/esp_heap_trace.inc
+.. include-build-file:: inc/esp_heap_trace.inc

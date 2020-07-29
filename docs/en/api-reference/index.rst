@@ -1,17 +1,18 @@
 *************
 API Reference
 *************
+:link_to_translation:`zh_CN:[中文]`
 
 .. toctree::
-   :maxdepth: 2
+    :maxdepth: 2
 
-   Wi-Fi <wifi/index>
-   Mesh <mesh/index>
-   Bluetooth <bluetooth/index>
-   Ethernet <ethernet/index>
-   Peripherals <peripherals/index>
-   Protocols <protocols/index>
-   Storage <storage/index>
-   System <system/index>
-   Configuration Options <kconfig>
+    :SOC_BT_SUPPORTED: Bluetooth <bluetooth/index>
+    Networking <network/index>
+    Peripherals <peripherals/index>
+    Protocols <protocols/index>
+    Provisioning <provisioning/index>
+    Storage <storage/index>
+    System <system/index>
+    Configuration Options <kconfig>
+    Error Codes Reference <error-codes>
 

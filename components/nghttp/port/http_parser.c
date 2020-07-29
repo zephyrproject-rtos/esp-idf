@@ -280,8 +280,11 @@ enum state
   { s_dead = 1 /* important that this is > 0 */
 
   , s_start_req_or_res
+  , s_res_or_resp_I /* for ICY URIs */
   , s_res_or_resp_H
   , s_start_res
+  , s_res_I         /* for ICY URIs */
+  , s_res_IC        /* for ICY URIs */
   , s_res_H
   , s_res_HT
   , s_res_HTT
@@ -729,6 +732,10 @@ reexecute:
           UPDATE_STATE(s_res_or_resp_H);
 
           CALLBACK_NOTIFY(message_begin);
+        } else if (ch == 'I') {
+          UPDATE_STATE(s_res_or_resp_I);
+
+          CALLBACK_NOTIFY(message_begin);
         } else {
           parser->type = HTTP_REQUEST;
           UPDATE_STATE(s_start_req);
@@ -737,6 +744,13 @@ reexecute:
 
         break;
       }
+
+      case s_res_or_resp_I: /* ICY URI case */
+        if (ch == 'C') {
+          parser->type = HTTP_RESPONSE;
+          UPDATE_STATE(s_res_IC);
+        }
+        break;
 
       case s_res_or_resp_H:
         if (ch == 'T') {
@@ -764,7 +778,9 @@ reexecute:
           case 'H':
             UPDATE_STATE(s_res_H);
             break;
-
+          case 'I': /* ICY URI */
+            UPDATE_STATE(s_res_I);
+            break;
           case CR:
           case LF:
             break;
@@ -777,6 +793,15 @@ reexecute:
         CALLBACK_NOTIFY(message_begin);
         break;
       }
+      case s_res_I:
+        STRICT_CHECK(ch != 'C');
+        UPDATE_STATE(s_res_IC);
+        break;
+
+      case s_res_IC:
+        STRICT_CHECK(ch != 'Y');
+        UPDATE_STATE(s_res_http_minor);
+        break;
 
       case s_res_H:
         STRICT_CHECK(ch != 'T');
@@ -1814,7 +1839,7 @@ reexecute:
 
             case 2:
               parser->upgrade = 1;
-
+              /* falls through */
             case 1:
               parser->flags |= F_SKIPBODY;
               break;
@@ -2374,7 +2399,7 @@ http_parser_parse_url(const char *buf, size_t buflen, int is_connect,
       case s_req_server_with_at:
         found_at = 1;
 
-      /* FALLTROUGH */
+        /* falls through */
       case s_req_server:
         uf = UF_HOST;
         break;

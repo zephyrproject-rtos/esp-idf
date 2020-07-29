@@ -19,27 +19,20 @@ The test env Example_ShieldBox do need the following config::
     apc_ip: "192.168.1.88"
     pc_nic: "eth0"
 """
+from __future__ import division
+from __future__ import unicode_literals
+from builtins import str
+from builtins import range
+from builtins import object
 import re
 import os
-import sys
 import time
 import subprocess
 
-# add current folder to system path for importing test_report
-sys.path.append(os.path.dirname(__file__))
-# this is a test case write with tiny-test-fw.
-# to run test cases outside tiny-test-fw,
-# we need to set environment variable `TEST_FW_PATH`,
-# then get and insert `TEST_FW_PATH` to sys path before import FW module
-test_fw_path = os.getenv("TEST_FW_PATH")
-if test_fw_path and test_fw_path not in sys.path:
-    sys.path.insert(0, test_fw_path)
+from tiny_test_fw import TinyFW, DUT, Utility
+import ttfw_idf
+from idf_iperf_test_util import (Attenuator, PowerControl, LineChart, TestReport)
 
-import IDF
-import DUT
-import Utility
-from Utility import (Attenuator, PowerControl, LineChart)
-from test_report import (ThroughputForConfigsReport, ThroughputVsRssiReport)
 
 # configurations
 TEST_TIME = TEST_TIMEOUT = 60
@@ -54,7 +47,7 @@ FAILED_TO_SCAN_RSSI = -97
 INVALID_HEAP_SIZE = 0xFFFFFFFF
 
 PC_IPERF_TEMP_LOG_FILE = ".tmp_iperf.log"
-CONFIG_NAME_PATTERN = re.compile(r"sdkconfig\.defaults\.(.+)")
+CONFIG_NAME_PATTERN = re.compile(r"sdkconfig\.ci\.(.+)")
 
 # We need to auto compare the difference between adjacent configs (01 -> 00, 02 -> 01, ...) and put them to reports.
 # Using numbers for config will make this easy.
@@ -75,7 +68,7 @@ class TestResult(object):
     BAD_POINT_PERCENTAGE_THRESHOLD = 0.3
 
     # we need at least 1/2 valid points to qualify the test result
-    THROUGHPUT_QUALIFY_COUNT = TEST_TIME / 2
+    THROUGHPUT_QUALIFY_COUNT = TEST_TIME // 2
 
     def __init__(self, proto, direction, config_name):
         self.proto = proto
@@ -152,8 +145,8 @@ class TestResult(object):
             throughput = 0.0
 
         if throughput == 0 and rssi > self.ZERO_THROUGHPUT_THRESHOLD:
-                self.error_list.append("[Error][Fatal][{}][att: {}][rssi: {}]: No throughput data found"
-                                       .format(ap_ssid, att, rssi))
+            self.error_list.append("[Error][Fatal][{}][att: {}][rssi: {}]: No throughput data found"
+                                   .format(ap_ssid, att, rssi))
 
         self._save_result(throughput, ap_ssid, att, rssi, heap_size)
 
@@ -169,7 +162,7 @@ class TestResult(object):
         def analysis_bad_point(data, index_type):
             for ap_ssid in data:
                 result_dict = data[ap_ssid]
-                index_list = result_dict.keys()
+                index_list = list(result_dict.keys())
                 index_list.sort()
                 if index_type == "att":
                     index_list.reverse()
@@ -312,7 +305,7 @@ class IperfTestUtility(object):
         except subprocess.CalledProcessError:
             pass
         self.dut.write("restart")
-        self.dut.expect("esp32>")
+        self.dut.expect("iperf>")
         self.dut.write("scan {}".format(self.ap_ssid))
         for _ in range(SCAN_RETRY_COUNT):
             try:
@@ -324,7 +317,7 @@ class IperfTestUtility(object):
         else:
             raise AssertionError("Failed to scan AP")
         self.dut.write("sta {} {}".format(self.ap_ssid, self.ap_password))
-        dut_ip = self.dut.expect(re.compile(r"event: sta ip: ([\d.]+), mask: ([\d.]+), gw: ([\d.]+)"))[0]
+        dut_ip = self.dut.expect(re.compile(r"sta ip: ([\d.]+), mask: ([\d.]+), gw: ([\d.]+)"))[0]
         return dut_ip, rssi
 
     def _save_test_result(self, test_case, raw_data, att, rssi, heap_size):
@@ -438,7 +431,7 @@ class IperfTestUtility(object):
         :return: True or False
         """
         self.dut.write("restart")
-        self.dut.expect("esp32>")
+        self.dut.expect("iperf>")
         for _ in range(WAIT_AP_POWER_ON_TIMEOUT // SCAN_TIMEOUT):
             try:
                 self.dut.write("scan {}".format(self.ap_ssid))
@@ -453,65 +446,38 @@ class IperfTestUtility(object):
         return ret
 
 
-def build_iperf_with_config(config_name):
-    """
-    we need to build iperf example with different configurations.
-
-    :param config_name: sdkconfig we want to build
-    """
-
-    # switch to iperf example path before build when we're running test with Runner
-    example_path = os.path.dirname(__file__)
-    cwd = os.getcwd()
-    if cwd != example_path and example_path:
-        os.chdir(example_path)
-    try:
-        subprocess.check_call("make clean > /dev/null", shell=True)
-        subprocess.check_call(["cp", "sdkconfig.defaults.{}".format(config_name), "sdkconfig.defaults"])
-        subprocess.check_call(["rm", "-f", "sdkconfig"])
-        subprocess.check_call("make defconfig > /dev/null", shell=True)
-        # save sdkconfig to generate config comparision report
-        subprocess.check_call(["cp", "sdkconfig", "sdkconfig.{}".format(config_name)])
-        subprocess.check_call("make -j5 > /dev/null", shell=True)
-        subprocess.check_call("make print_flash_cmd | tail -n 1 > build/download.config", shell=True)
-    finally:
-        os.chdir(cwd)
-
-
-def get_configs(env):
-    att_port = env.get_variable("attenuator_port")
-    ap_list = env.get_variable("ap_list")
-    pc_nic_ip = env.get_pc_nic_info("pc_nic", "ipv4")["addr"]
-    apc_ip = env.get_variable("apc_ip")
-    pc_iperf_log_file = os.path.join(env.log_path, "pc_iperf_log.md")
-    return att_port, ap_list, pc_nic_ip, apc_ip, pc_iperf_log_file
-
-
-@IDF.idf_example_test(env_tag="Example_ShieldBox", category="stress")
+@ttfw_idf.idf_example_test(env_tag="Example_ShieldBox_Basic", category="stress")
 def test_wifi_throughput_with_different_configs(env, extra_data):
     """
     steps: |
       1. build iperf with specified configs
       2. test throughput for all routers
     """
-    att_port, ap_list, pc_nic_ip, apc_ip, pc_iperf_log_file = get_configs(env)
-    ap_info = ap_list[0]
+    pc_nic_ip = env.get_pc_nic_info("pc_nic", "ipv4")["addr"]
+    pc_iperf_log_file = os.path.join(env.log_path, "pc_iperf_log.md")
+    ap_info = {
+        "ssid": env.get_variable("ap_ssid"),
+        "password": env.get_variable("ap_password"),
+    }
 
     config_names_raw = subprocess.check_output(["ls", os.path.dirname(os.path.abspath(__file__))])
+    config_names = CONFIG_NAME_PATTERN.findall(config_names_raw)
+    if not config_names:
+        raise ValueError("no configs found in {}".format(os.path.dirname(__file__)))
 
     test_result = dict()
     sdkconfig_files = dict()
 
-    for config_name in CONFIG_NAME_PATTERN.findall(config_names_raw):
-        # 1. build config
-        build_iperf_with_config(config_name)
+    for config_name in config_names:
+        # 1. get the config
         sdkconfig_files[config_name] = os.path.join(os.path.dirname(__file__),
-                                                    "sdkconfig.{}".format(config_name))
+                                                    "sdkconfig.ci.{}".format(config_name))
 
         # 2. get DUT and download
-        dut = env.get_dut("iperf", "examples/wifi/iperf")
+        dut = env.get_dut("iperf", "examples/wifi/iperf", dut_class=ttfw_idf.ESP32DUT,
+                          app_config_name=config_name)
         dut.start_app()
-        dut.expect("esp32>")
+        dut.expect("iperf>")
 
         # 3. run test for each required att value
         test_result[config_name] = {
@@ -523,14 +489,6 @@ def test_wifi_throughput_with_different_configs(env, extra_data):
 
         test_utility = IperfTestUtility(dut, config_name, ap_info["ssid"],
                                         ap_info["password"], pc_nic_ip, pc_iperf_log_file, test_result[config_name])
-
-        PowerControl.Control.control_rest(apc_ip, ap_info["outlet"], "OFF")
-        PowerControl.Control.control(apc_ip, {ap_info["outlet"]: "ON"})
-        assert Attenuator.set_att(att_port, 0) is True
-
-        if not test_utility.wait_ap_power_on():
-            Utility.console_log("[{}] failed to power on, skip testing this AP"
-                                .format(ap_info["ssid"]), color="red")
 
         for _ in range(RETRY_COUNT_FOR_BEST_PERFORMANCE):
             test_utility.run_all_cases(0)
@@ -544,12 +502,12 @@ def test_wifi_throughput_with_different_configs(env, extra_data):
         env.close_dut("iperf")
 
     # 5. generate report
-    report = ThroughputForConfigsReport(os.path.join(env.log_path, "ThroughputForConfigsReport"),
-                                        ap_info["ssid"], test_result, sdkconfig_files)
+    report = TestReport.ThroughputForConfigsReport(os.path.join(env.log_path, "ThroughputForConfigsReport"),
+                                                   ap_info["ssid"], test_result, sdkconfig_files)
     report.generate_report()
 
 
-@IDF.idf_example_test(env_tag="Example_ShieldBox", category="stress")
+@ttfw_idf.idf_example_test(env_tag="Example_ShieldBox", category="stress")
 def test_wifi_throughput_vs_rssi(env, extra_data):
     """
     steps: |
@@ -558,8 +516,10 @@ def test_wifi_throughput_vs_rssi(env, extra_data):
       3. set attenuator value from 0-60 for each router
       4. test TCP tx rx and UDP tx rx throughput
     """
-    att_port, ap_list, pc_nic_ip, apc_ip, pc_iperf_log_file = get_configs(env)
-
+    att_port = env.get_variable("attenuator_port")
+    ap_list = env.get_variable("ap_list")
+    pc_nic_ip = env.get_pc_nic_info("pc_nic", "ipv4")["addr"]
+    apc_ip = env.get_variable("apc_ip")
     pc_iperf_log_file = os.path.join(env.log_path, "pc_iperf_log.md")
 
     test_result = {
@@ -569,15 +529,13 @@ def test_wifi_throughput_vs_rssi(env, extra_data):
         "udp_rx": TestResult("udp", "rx", BEST_PERFORMANCE_CONFIG),
     }
 
-    # 1. build config
-    build_iperf_with_config(BEST_PERFORMANCE_CONFIG)
-
-    # 2. get DUT and download
-    dut = env.get_dut("iperf", "examples/wifi/iperf")
+    # 1. get DUT and download
+    dut = env.get_dut("iperf", "examples/wifi/iperf", dut_class=ttfw_idf.ESP32DUT,
+                      app_config_name=BEST_PERFORMANCE_CONFIG)
     dut.start_app()
-    dut.expect("esp32>")
+    dut.expect("iperf>")
 
-    # 3. run test for each required att value
+    # 2. run test for each required att value
     for ap_info in ap_list:
         test_utility = IperfTestUtility(dut, BEST_PERFORMANCE_CONFIG, ap_info["ssid"], ap_info["password"],
                                         pc_nic_ip, pc_iperf_log_file, test_result)
@@ -595,34 +553,36 @@ def test_wifi_throughput_vs_rssi(env, extra_data):
             assert Attenuator.set_att(att_port, atten_val) is True
             test_utility.run_all_cases(atten_val)
 
-    # 4. check test results
+    # 3. check test results
     env.close_dut("iperf")
 
-    # 5. generate report
-    report = ThroughputVsRssiReport(os.path.join(env.log_path, "ThroughputVsRssiReport"),
-                                    test_result)
+    # 4. generate report
+    report = TestReport.ThroughputVsRssiReport(os.path.join(env.log_path, "ThroughputVsRssiReport"),
+                                               test_result)
     report.generate_report()
 
 
-@IDF.idf_example_test(env_tag="Example_ShieldBox")
+@ttfw_idf.idf_example_test(env_tag="Example_ShieldBox_Basic")
 def test_wifi_throughput_basic(env, extra_data):
     """
     steps: |
       1. test TCP tx rx and UDP tx rx throughput
       2. compare with the pre-defined pass standard
     """
-    att_port, ap_list, pc_nic_ip, apc_ip, pc_iperf_log_file = get_configs(env)
-    ap_info = ap_list[0]
+    pc_nic_ip = env.get_pc_nic_info("pc_nic", "ipv4")["addr"]
+    pc_iperf_log_file = os.path.join(env.log_path, "pc_iperf_log.md")
+    ap_info = {
+        "ssid": env.get_variable("ap_ssid"),
+        "password": env.get_variable("ap_password"),
+    }
 
-    # 1. build iperf with best config
-    build_iperf_with_config(BEST_PERFORMANCE_CONFIG)
-
-    # 2. get DUT
-    dut = env.get_dut("iperf", "examples/wifi/iperf")
+    # 1. get DUT
+    dut = env.get_dut("iperf", "examples/wifi/iperf", dut_class=ttfw_idf.ESP32DUT,
+                      app_config_name=BEST_PERFORMANCE_CONFIG)
     dut.start_app()
-    dut.expect("esp32>")
+    dut.expect("iperf>")
 
-    # 3. preparing
+    # 2. preparing
     test_result = {
         "tcp_tx": TestResult("tcp", "tx", BEST_PERFORMANCE_CONFIG),
         "tcp_rx": TestResult("tcp", "rx", BEST_PERFORMANCE_CONFIG),
@@ -633,26 +593,24 @@ def test_wifi_throughput_basic(env, extra_data):
     test_utility = IperfTestUtility(dut, BEST_PERFORMANCE_CONFIG, ap_info["ssid"],
                                     ap_info["password"], pc_nic_ip, pc_iperf_log_file, test_result)
 
-    PowerControl.Control.control_rest(apc_ip, ap_info["outlet"], "OFF")
-    PowerControl.Control.control(apc_ip, {ap_info["outlet"]: "ON"})
-    assert Attenuator.set_att(att_port, 0) is True
-
-    if not test_utility.wait_ap_power_on():
-        Utility.console_log("[{}] failed to power on, skip testing this AP"
-                            .format(ap_info["ssid"]), color="red")
-
-    # 4. run test for TCP Tx, Rx and UDP Tx, Rx
+    # 3. run test for TCP Tx, Rx and UDP Tx, Rx
     for _ in range(RETRY_COUNT_FOR_BEST_PERFORMANCE):
         test_utility.run_all_cases(0)
 
-    # 5. log performance and compare with pass standard
+    # 4. log performance and compare with pass standard
+    performance_items = []
     for throughput_type in test_result:
-        IDF.log_performance("{}_throughput".format(throughput_type),
-                            "{:.02f} Mbps".format(test_result[throughput_type].get_best_throughput()))
+        ttfw_idf.log_performance("{}_throughput".format(throughput_type),
+                                 "{:.02f} Mbps".format(test_result[throughput_type].get_best_throughput()))
+        performance_items.append(["{}_throughput".format(throughput_type),
+                                  "{:.02f} Mbps".format(test_result[throughput_type].get_best_throughput())])
+
+    # 5. save to report
+    TinyFW.JunitReport.update_performance(performance_items)
     # do check after logging, otherwise test will exit immediately if check fail, some performance can't be logged.
     for throughput_type in test_result:
-        IDF.check_performance("{}_throughput".format(throughput_type),
-                              test_result[throughput_type].get_best_throughput())
+        ttfw_idf.check_performance("{}_throughput".format(throughput_type),
+                                   test_result[throughput_type].get_best_throughput(), dut.TARGET)
 
     env.close_dut("iperf")
 

@@ -1,27 +1,161 @@
+#pragma once
 
-/* @brief macro to print IDF performance
- * @param mode :        performance item name. a string pointer.
- * @param value_fmt:    print format and unit of the value, for example: "%02fms", "%dKB"
- * @param value :       the performance value.
-*/
-#define IDF_LOG_PERFORMANCE(item, value_fmt, value) \
-    printf("[Performance][%s]: "value_fmt"\n", item, value)
+/* put target-specific macros into include/target/idf_performance_target.h */
+#include "idf_performance_target.h"
 
+/* Define default values in this file with #ifndef if the value could been overwritten in the target-specific headers
+ * above. Forgetting this will produce compile-time warnings.
+ */
 
-/* declare the performance here */
-#define IDF_PERFORMANCE_MAX_HTTPS_REQUEST_BIN_SIZE                              800
+#ifndef IDF_PERFORMANCE_MAX_HTTPS_REQUEST_BIN_SIZE
+#define IDF_PERFORMANCE_MAX_HTTPS_REQUEST_BIN_SIZE                              900
+#endif
+#ifndef IDF_PERFORMANCE_MAX_FREERTOS_SPINLOCK_CYCLES_PER_OP
 #define IDF_PERFORMANCE_MAX_FREERTOS_SPINLOCK_CYCLES_PER_OP                     200
-#define IDF_PERFORMANCE_MAX_FREERTOS_SPINLOCK_CYCLES_PER_OP_PSRAM               270
+#endif
+#ifndef IDF_PERFORMANCE_MAX_FREERTOS_SPINLOCK_CYCLES_PER_OP_PSRAM
+#define IDF_PERFORMANCE_MAX_FREERTOS_SPINLOCK_CYCLES_PER_OP_PSRAM               300
+#endif
+#ifndef IDF_PERFORMANCE_MAX_FREERTOS_SPINLOCK_CYCLES_PER_OP_UNICORE
 #define IDF_PERFORMANCE_MAX_FREERTOS_SPINLOCK_CYCLES_PER_OP_UNICORE             130
+#endif
+#ifndef IDF_PERFORMANCE_MAX_ESP_TIMER_GET_TIME_PER_CALL
 #define IDF_PERFORMANCE_MAX_ESP_TIMER_GET_TIME_PER_CALL                         1000
-#define IDF_PERFORMANCE_MAX_SPI_PER_TRANS_NO_POLLING                            30
-#define IDF_PERFORMANCE_MAX_SPI_PER_TRANS_NO_POLLING_NO_DMA                     27
+#endif
+
+#ifndef IDF_PERFORMANCE_MAX_SPI_PER_TRANS_POLLING
+#define IDF_PERFORMANCE_MAX_SPI_PER_TRANS_POLLING                               15
+#endif
+#ifndef IDF_PERFORMANCE_MAX_SPI_PER_TRANS_POLLING_NO_DMA
+#define IDF_PERFORMANCE_MAX_SPI_PER_TRANS_POLLING_NO_DMA                        15
+#endif
+
 /* Due to code size & linker layout differences interacting with cache, VFS
    microbenchmark currently runs slower with PSRAM enabled. */
+#ifndef IDF_PERFORMANCE_MAX_VFS_OPEN_WRITE_CLOSE_TIME
 #define IDF_PERFORMANCE_MAX_VFS_OPEN_WRITE_CLOSE_TIME                           20000
-#define IDF_PERFORMANCE_MAX_VFS_OPEN_WRITE_CLOSE_TIME_PSRAM                     40000
+#endif
+#ifndef IDF_PERFORMANCE_MAX_VFS_OPEN_WRITE_CLOSE_TIME_PSRAM
+#define IDF_PERFORMANCE_MAX_VFS_OPEN_WRITE_CLOSE_TIME_PSRAM                     25000
+#endif
+
 // throughput performance by iperf
-#define IDF_PERFORMANCE_MIN_TCP_RX_THROUGHPUT                                   50
+#ifndef IDF_PERFORMANCE_MIN_TCP_RX_THROUGHPUT
+#define IDF_PERFORMANCE_MIN_TCP_RX_THROUGHPUT                                   45
+#endif
+#ifndef IDF_PERFORMANCE_MIN_TCP_TX_THROUGHPUT
 #define IDF_PERFORMANCE_MIN_TCP_TX_THROUGHPUT                                   40
-#define IDF_PERFORMANCE_MIN_UDP_RX_THROUGHPUT                                   80
+#endif
+#ifndef IDF_PERFORMANCE_MIN_UDP_RX_THROUGHPUT
+#define IDF_PERFORMANCE_MIN_UDP_RX_THROUGHPUT                                   64
+#endif
+#ifndef IDF_PERFORMANCE_MIN_UDP_TX_THROUGHPUT
 #define IDF_PERFORMANCE_MIN_UDP_TX_THROUGHPUT                                   50
+#endif
+
+// events dispatched per second by event loop library
+#ifndef IDF_PERFORMANCE_MIN_EVENT_DISPATCH
+#define IDF_PERFORMANCE_MIN_EVENT_DISPATCH                                      25000
+#endif
+#ifndef IDF_PERFORMANCE_MIN_EVENT_DISPATCH_PSRAM
+#define IDF_PERFORMANCE_MIN_EVENT_DISPATCH_PSRAM                                21000
+#endif
+
+#ifndef IDF_PERFORMANCE_MAX_SPILL_REG_CYCLES
+#define IDF_PERFORMANCE_MAX_SPILL_REG_CYCLES                                    150
+#endif
+#ifndef IDF_PERFORMANCE_MAX_ISR_ENTER_CYCLES
+#define IDF_PERFORMANCE_MAX_ISR_ENTER_CYCLES                                    290
+#endif
+#ifndef IDF_PERFORMANCE_MAX_ISR_EXIT_CYCLES
+#define IDF_PERFORMANCE_MAX_ISR_EXIT_CYCLES                                     565
+#endif
+
+#ifndef IDF_PERFORMANCE_MIN_SDIO_THROUGHPUT_KBSEC_TOHOST_4BIT
+#define IDF_PERFORMANCE_MIN_SDIO_THROUGHPUT_KBSEC_TOHOST_4BIT                   12200
+#endif
+#ifndef IDF_PERFORMANCE_MIN_SDIO_THROUGHPUT_KBSEC_FRHOST_4BIT
+#define IDF_PERFORMANCE_MIN_SDIO_THROUGHPUT_KBSEC_FRHOST_4BIT                   12200
+#endif
+#ifndef IDF_PERFORMANCE_MIN_SDIO_THROUGHPUT_KBSEC_TOHOST_1BIT
+#define IDF_PERFORMANCE_MIN_SDIO_THROUGHPUT_KBSEC_TOHOST_1BIT                   4000
+#endif
+#ifndef IDF_PERFORMANCE_MIN_SDIO_THROUGHPUT_KBSEC_FRHOST_1BIT
+#define IDF_PERFORMANCE_MIN_SDIO_THROUGHPUT_KBSEC_FRHOST_1BIT                   4000
+#endif
+#ifndef IDF_PERFORMANCE_MIN_SDIO_THROUGHPUT_KBSEC_TOHOST_SPI
+#define IDF_PERFORMANCE_MIN_SDIO_THROUGHPUT_KBSEC_TOHOST_SPI                    1000
+#endif
+#ifndef IDF_PERFORMANCE_MIN_SDIO_THROUGHPUT_KBSEC_FRHOST_SPI
+#define IDF_PERFORMANCE_MIN_SDIO_THROUGHPUT_KBSEC_FRHOST_SPI                    1000
+#endif
+
+#ifndef IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_LEGACY_WR_4B
+#define IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_LEGACY_WR_4B               22200
+#endif
+#ifndef IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_LEGACY_RD_4B
+#define IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_LEGACY_RD_4B               53400
+#endif
+#ifndef IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_LEGACY_WR_2KB
+#define IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_LEGACY_WR_2KB              (701*1000)
+#endif
+#ifndef IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_LEGACY_RD_2KB
+#define IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_LEGACY_RD_2KB              (7088*1000)
+#endif
+#ifndef IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_LEGACY_ERASE
+#define IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_LEGACY_ERASE               52200
+#endif
+
+#ifndef IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_WR_4B
+#define IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_WR_4B                      27400
+#endif
+#ifndef IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_RD_4B
+#define IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_RD_4B                      53600
+#endif
+#ifndef IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_WR_2KB
+#define IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_WR_2KB                     (1015*1000)
+#endif
+#ifndef IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_RD_2KB
+#define IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_RD_2KB                     (7797*1000)
+#endif
+#ifndef IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_ERASE
+#define IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_ERASE                      44300
+#endif
+
+#ifndef IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_SPI1_WR_4B
+#define IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_SPI1_WR_4B                 24400
+#endif
+#ifndef IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_SPI1_RD_4B
+#define IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_SPI1_RD_4B                 50100
+#endif
+#ifndef IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_SPI1_WR_2KB
+#define IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_SPI1_WR_2KB                (618*1000)
+#endif
+#ifndef IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_SPI1_RD_2KB
+#define IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_SPI1_RD_2KB                (1601*1000)
+#endif
+#ifndef IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_SPI1_ERASE
+#define IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_SPI1_ERASE                 59800
+#endif
+
+// Some performance value based on the test against GD chip with single_core config.
+#ifndef IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_EXT_WR_4B
+#define IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_EXT_WR_4B                  68900
+#endif
+#ifndef IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_EXT_RD_4B
+#define IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_EXT_RD_4B                  (359*1000)
+#endif
+#ifndef IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_EXT_WR_2KB
+#define IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_EXT_WR_2KB                 (475*1000)
+#endif
+#ifndef IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_EXT_RD_2KB
+#define IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_EXT_RD_2KB                 (1697*1000)
+#endif
+#ifndef IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_EXT_ERASE
+#define IDF_PERFORMANCE_MIN_FLASH_SPEED_BYTE_PER_SEC_EXT_ERASE                  81300
+#endif
+
+//time to perform the task selection plus context switch (from task)
+#ifndef IDF_PERFORMANCE_MAX_SCHEDULING_TIME
+#define IDF_PERFORMANCE_MAX_SCHEDULING_TIME                                     2000
+#endif

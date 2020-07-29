@@ -2,9 +2,10 @@
 #include <stdlib.h>
 #include <time.h>
 #include <sys/time.h>
+#include <sys/param.h>
 #include "unity.h"
 #include "esp_pm.h"
-#include "esp_clk.h"
+#include "esp32/clk.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -12,9 +13,9 @@
 #include "driver/timer.h"
 #include "driver/rtc_io.h"
 #include "esp32/ulp.h"
-#include "soc/rtc_io_reg.h"
-#include "soc/rtc_cntl_reg.h"
-#include "soc/rtc_gpio_channel.h"
+#include "soc/rtc_periph.h"
+
+#define MHZ     1000000
 
 TEST_CASE("Can dump power management lock stats", "[pm]")
 {
@@ -25,24 +26,22 @@ TEST_CASE("Can dump power management lock stats", "[pm]")
 
 static void switch_freq(int mhz)
 {
-    rtc_cpu_freq_t max_freq;
-    assert(rtc_clk_cpu_freq_from_mhz(mhz, &max_freq));
+    int xtal_freq = rtc_clk_xtal_freq_get();
     esp_pm_config_esp32_t pm_config = {
-        .max_cpu_freq = max_freq,
-        .min_cpu_freq = RTC_CPU_FREQ_XTAL,
+        .max_freq_mhz = mhz,
+        .min_freq_mhz = MIN(mhz, xtal_freq),
     };
     ESP_ERROR_CHECK( esp_pm_configure(&pm_config) );
-    printf("Waiting for frequency to be set to %d (%d MHz)...\n", max_freq, mhz);
-    while (esp_clk_cpu_freq() / 1000000 != mhz) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        printf("Frequency is %d MHz\n", esp_clk_cpu_freq());
+    printf("Waiting for frequency to be set to %d MHz...\n", mhz);
+    while (esp_clk_cpu_freq() / MHZ != mhz) {
+        vTaskDelay(pdMS_TO_TICKS(200));
+        printf("Frequency is %d MHz\n", esp_clk_cpu_freq() / MHZ);
     }
-    printf("Frequency is set to %d MHz\n", mhz);
 }
 
 TEST_CASE("Can switch frequency using esp_pm_configure", "[pm]")
 {
-    int orig_freq_mhz = esp_clk_cpu_freq() / 1000000;
+    int orig_freq_mhz = esp_clk_cpu_freq() / MHZ;
     switch_freq(240);
     switch_freq(40);
     switch_freq(160);
@@ -52,26 +51,35 @@ TEST_CASE("Can switch frequency using esp_pm_configure", "[pm]")
     switch_freq(240);
     switch_freq(40);
     switch_freq(80);
+    switch_freq(10);
+    switch_freq(80);
+    switch_freq(20);
+    switch_freq(40);
     switch_freq(orig_freq_mhz);
 }
 
 #if CONFIG_FREERTOS_USE_TICKLESS_IDLE
 
-static void light_sleep_enable()
+static void light_sleep_enable(void)
 {
+    int cur_freq_mhz = esp_clk_cpu_freq() / MHZ;
+    int xtal_freq = (int) rtc_clk_xtal_freq_get();
+
     const esp_pm_config_esp32_t pm_config = {
-        .max_cpu_freq = rtc_clk_cpu_freq_get(),
-        .min_cpu_freq = RTC_CPU_FREQ_XTAL,
+        .max_freq_mhz = cur_freq_mhz,
+        .min_freq_mhz = xtal_freq,
         .light_sleep_enable = true
     };
     ESP_ERROR_CHECK( esp_pm_configure(&pm_config) );
 }
 
-static void light_sleep_disable()
+static void light_sleep_disable(void)
 {
+    int cur_freq_mhz = esp_clk_cpu_freq() / MHZ;
+
     const esp_pm_config_esp32_t pm_config = {
-        .max_cpu_freq = rtc_clk_cpu_freq_get(),
-        .min_cpu_freq = rtc_clk_cpu_freq_get(),
+        .max_freq_mhz = cur_freq_mhz,
+        .min_freq_mhz = cur_freq_mhz,
     };
     ESP_ERROR_CHECK( esp_pm_configure(&pm_config) );
 }
@@ -119,7 +127,7 @@ TEST_CASE("Automatic light occurs when tasks are suspended", "[pm]")
 
 TEST_CASE("Can wake up from automatic light sleep by GPIO", "[pm]")
 {
-    assert(CONFIG_ULP_COPROC_RESERVE_MEM >= 16 && "this test needs ULP_COPROC_RESERVE_MEM option set in menuconfig");
+    assert(CONFIG_ESP32_ULP_COPROC_RESERVE_MEM >= 16 && "this test needs ESP32_ULP_COPROC_RESERVE_MEM option set in menuconfig");
 
     /* Set up GPIO used to wake up RTC */
     const int ext1_wakeup_gpio = 25;
@@ -147,12 +155,12 @@ TEST_CASE("Can wake up from automatic light sleep by GPIO", "[pm]")
     TEST_ESP_OK(ulp_process_macros_and_load(0, ulp_code, &size));
 
     light_sleep_enable();
-
+    int rtcio_num = rtc_io_number_get(ext1_wakeup_gpio);
     for (int i = 0; i < 10; ++i) {
         /* Set GPIO low */
-        REG_CLR_BIT(rtc_gpio_desc[ext1_wakeup_gpio].reg, rtc_gpio_desc[ext1_wakeup_gpio].hold_force);
+        REG_CLR_BIT(rtc_io_desc[rtcio_num].reg, rtc_io_desc[rtcio_num].hold_force);
         rtc_gpio_set_level(ext1_wakeup_gpio, 0);
-        REG_SET_BIT(rtc_gpio_desc[ext1_wakeup_gpio].reg, rtc_gpio_desc[ext1_wakeup_gpio].hold_force);
+        REG_SET_BIT(rtc_io_desc[rtcio_num].reg, rtc_io_desc[rtcio_num].hold_force);
 
         /* Wait for the next tick */
         vTaskDelay(1);
@@ -178,7 +186,7 @@ TEST_CASE("Can wake up from automatic light sleep by GPIO", "[pm]")
         TEST_ASSERT_INT32_WITHIN(2 * portTICK_PERIOD_MS * 1000, delay_ms * 1000, end_hs - start_hs);
         TEST_ASSERT_INT32_WITHIN(2 * portTICK_PERIOD_MS * 1000, delay_ms * 1000, end_rtc - start_rtc);
     }
-    REG_CLR_BIT(rtc_gpio_desc[ext1_wakeup_gpio].reg, rtc_gpio_desc[ext1_wakeup_gpio].hold_force);
+    REG_CLR_BIT(rtc_io_desc[rtcio_num].reg, rtc_io_desc[rtcio_num].hold_force);
     rtc_gpio_deinit(ext1_wakeup_gpio);
 
     light_sleep_disable();

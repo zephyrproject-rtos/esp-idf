@@ -1,157 +1,150 @@
-# Blink Example with Coverage Info
+| Supported Targets | ESP32 |
+| ----------------- | ----- |
 
-See the README.md file in the upper level 'examples' directory for more information about examples.
+# Blink Example With Coverage Info (Gcov)
 
-GCC has useful feature which allows to generate code coverage information. Generated data show how many times every program execution paths has been taken.
-Basing on coverage data developers can detect untested pieces of code and also it gives valuable information about critical (frequently used) execution paths.
-In general case when coverage option is enabled GCC generates additional code to accumulate necessary data and save them into files. File system is not always available in ESP32 based projects or size of the file storage can be very limited to keep all the coverage data. To overcome those limitations IDF provides functionality to transfer the data to host and save them on its file system. Data transfer is done via JTAG.
-This example shows how to generate coverage information for the program.
+(See the README.md file in the upper level 'examples' directory for more information about examples.)
 
-## How To Gather Coverage Info
+The following example demonstrates how to compile an ESP-IDF project to generate code coverage data, and how generate a code coverage report using Gcov or Lcov. Refer to the [Gcov Guide](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/app_trace.html#gcov-source-code-coverage) for more details on the code coverage features supported in ESP-IDF.
 
-There are two ways to collect gcov data:
-* Hard-coded call to `esp_gcov_dump`.
-* Instant run-time dumping w/o changes in your code via IDF's gcov debug stub.
+This example implements a simple blink application but with code coverage enabled. The example will demonstrate the following features:
+* How to compile a project with coverage info enabled.
+* Various methods of dumping code coverage data (e.g. Instant Run-Time Dump and Hard-coded Dump).
+* How to generate a code coverage report.
 
-### Generic Steps
+## How to use example
 
-Below are generic steps which should be performed to obtain coverage info. The steps are already done for this example project.
+### Hardware Required
 
-1. Enable application tracing module in menuconfig. Choose `Trace memory` in `Component config -> Application Level Tracing -> Data Destination`.
-2. Enable GCOV to host interface in menuconfig `Component config -> Application Level Tracing -> GCOV to Host Enable`.
-3. Enable coverage info generation for necessary source files. To do this add the following line to the 'component.mk' files of your project:
-`CFLAGS += --coverage`
-It will enable coverage info for all source files of your component. If you need to enable the option only for certain files the following line should be added for every file of interest:
-`gcov_example.o: CFLAGS += --coverage`
-Replace `gcov_example.o` with path to your file.
+To run this example, you need an ESP32 dev board connected to a JTAG adapter, which can come in the following forms:
 
-### Hard-coded Dump Call
+* [ESP-WROVER-KIT](https://docs.espressif.com/projects/esp-idf/en/latest/hw-reference/modules-and-boards.html#esp-wrover-kit-v4-1) which integrates an on-board JTAG adapter. Ensure that the [required jumpers to enable JTAG are connected](https://docs.espressif.com/projects/esp-idf/en/latest/get-started/get-started-wrover-kit.html#setup-options) on the WROVER-KIT.
+* ESP32 core board (e.g. ESP32-DevKitC) can also work as long as you connect it to an external JTAG adapter (e.g. FT2232H, J-LINK).
 
-This method requires `esp_gcov_dump` to be called from your application's code. Below are additional steps which should be performed after the generic ones to obtain coverage info via hard-coded call. Step 1 is already done for this example project.
+This example will assume that that an ESP-WROVER-KIT is used.
 
-1. Add call to `esp_gcov_dump` function in your program. This function will wait for command from host and dump coverage data. The exact place where to put the call  depends on the program.
-Usually it should be placed at the end of the program execution (at exit). But if you need to generate GCOV data incrementally `esp_gcov_dump` can be called multiple times. See `gcov_example.c` for example.
-2. Build, flash and run program.
-3. Wait until `esp_gcov_dump` is called. To detect this a call to `printf` can be used (see `gcov_example.c`) or, for example, you can use a LED to indicate the readiness to dump data.
-Another way to detect call to `esp_gcov_dump` is to set breakpoint on that function, start target execution and wait for the target to be stopped. See the next section for respective GDB example.
-4. Connect OpenOCD to the target and start telnet session with it.
-5. Run the following OpenOCD command: `esp32 gcov dump`
+1. Connect the JTAG interface to ESP32 board, and power up both the JTAG and ESP32. For details about how to set up JTAG interface, please see [JTAG Debugging](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/jtag-debugging/index.html).
 
-Example of the command output:
+2. After connecting JTAG interface, you need to [Run OpenOCD](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/jtag-debugging/index.html#run-openocd).
+
+3. Open a separate terminal window and run telnet by entering the command below. The telnet terminal window is used to feed commands to OpenOCD:
+
+```bash
+telnet localhost 4444
 ```
-> esp32 gcov dump
+
+### Configure the project
+
+```
+idf.py menuconfig
+```
+
+The example will enable the following options by default:
+
+* Enable the Application Tracing Module under `Component config -> Application Level Tracing -> Data Destination` by choosing `Trace memory`.
+* Enable GCOV to host interface under `Component config -> Application Level Tracing -> GCOV to Host Enable`.
+* Enable OpenOCD Debug Stubs under `Component config -> ESP32-specific -> OpenOCD debug stubs`
+
+### Build, Flash, and Run
+
+Build the project and flash it to the board, then run monitor tool to view serial output:
+
+```
+idf.py -p PORT flash monitor
+```
+
+(Replace PORT with the name of the serial port to use.)
+
+(To exit the serial monitor, type ``Ctrl-]``.)
+
+See the Getting Started Guide for full steps to configure and use ESP-IDF to build projects.
+
+## Example Output
+
+### 1. Hard-coded Dump
+
+The example will initially execute two hard-coded dumps. Therefore, when the application outputs `Ready to dump GCOV data...`, users should execute the `esp gcov dump` OpenOCD command. The example should output the following:
+
+```
+blink_dummy_func: Counter = 0
+some_dummy_func: Counter = 0
+Ready to dump GCOV data...
+GCOV data have been dumped.
+blink_dummy_func: Counter = 1
+some_dummy_func: Counter = 2
+Ready to dump GCOV data...
+GCOV data have been dumped.
+```
+
+### 2. Instant Run-Time Dump
+
+After the two hard-coded dumps, the example will continue looping through it's main blink function. Users can call `esp gcov` OpenOCD command to trigger an instant run-time dump. The output should resemble the following:
+
+```
+blink_dummy_func: Counter = 2
+some_dummy_func: Counter = 4
+blink_dummy_func: Counter = 3
+some_dummy_func: Counter = 6
+blink_dummy_func: Counter = 4
+some_dummy_func: Counter = 8
+blink_dummy_func: Counter = 5
+some_dummy_func: Counter = 10
+blink_dummy_func: Counter = 6
+some_dummy_func: Counter = 12
+blink_dummy_func: Counter = 7
+some_dummy_func: Counter = 14
+blink_dummy_func: Counter = 8
+some_dummy_func: Counter = 16
+blink_dummy_func: Counter = 9
+some_dummy_func: Counter = 18
+blink_dummy_func: Counter = 10
+some_dummy_func: Counter = 20
+...
+```
+
+### Generating Gcovr Report
+
+After dumping one or more times, a coverage report can be generated by calling `cmake --build build/ --target gcovr-report`. This should result in an HTML code coverage report being generated in the build directory.
+
+To clean Gcov and report related data from the build directory, call `cmake --build build/ --target cov-data-clean`
+
+The following log should be output when generating the coverage report:
+
+```
+[1/2] Generating coverage report in: /home/user/esp/esp-idf/examples/system/gcov/build/coverage_report
+Using gcov: xtensa-esp32-elf-gcov
+[2/2] cd /home/user/esp/esp-idf/examples/system/gcov/build && gcovr -r /home/user/esp/esp-idf/examples/system/gcov...a-esp32-elf-gcov -s --html-details /home/user/esp/esp-idf/examples/system/gcov/build/coverage_report/html/index.htm
+lines: 100.0% (27 out of 27)
+branches: 100.0% (2 out of 2)
+```
+
+## Troubleshooting
+
+### OpenOCD Out of Sync
+
+If the following log is output when issuing an OpenOCD command via telnet, it could indicate that OpenOCD and the ESP32 are out of sync. This occurs when the ESP32 is externally reset whilst connected to OpenOCD (e.g., by pressing the EN button).
+
+```
+Open On-Chip Debugger
+> esp gcov dump
+Target halted. PRO_CPU: PC=0x4008AFF4 (active)    APP_CPU: PC=0x400E396E
 Total trace memory: 16384 bytes
 Connect targets...
-Target halted. PRO_CPU: PC=0x40088BC3 (active)    APP_CPU: PC=0x400D14E6 
-Targets connected.
-Open file 0x1 '/home/alexey/projects/esp/esp-idf/examples/system/gcov/build/main/gcov_example.gcda'
-Open file 0x1 '/home/alexey/projects/esp/esp-idf/examples/system/gcov/build/main/gcov_example.gcda'
-Open file 0x2 '/home/alexey/projects/esp/esp-idf/examples/system/gcov/build/main/gcov_example_func.gcda'
-Open file 0x2 '/home/alexey/projects/esp/esp-idf/examples/system/gcov/build/main/gcov_example_func.gcda'
-Disconnect targets...
-Target halted. PRO_CPU: PC=0x400D14E6 (active)    APP_CPU: PC=0x400D14E6 
-Targets disconnected.
+Target halted. PRO_CPU: PC=0x400D5D74 (active)    APP_CPU: PC=0x400E396E
+timed out while waiting for target halted / 1 - 2
+Failed to wait halt on bp target (-4)!
+Failed to halt targets (-4)!
+Failed to connect to targets (-4)!
 ```
 
-#### Dump Using GDB
+This issue can be resolved in the following ways:
+* Reset the board by issuing the `reset` command via telnet
+* Restart OpenOCD
 
-As it was said above breakpoint can be used to detect when `esp_gcov_dump` is called.
-The following GDB commands can be used to dump data upon call to `esp_gcov_dump` automatically (you can put them into `gdbinit` file):
-```
-b esp_gcov_dump
-commands
-mon esp32 gcov dump
-end
-```
-Note that all OpenOCD commands should be invoked in gdb as: `mon <oocd_command>`.
+### gcovr not found
 
-### Instant Run-Time Dump
-
-Instant dump does not require to call `esp_gcov_dump`, so your application's code does not need to be modified. This method stops target at its current state and executes builtin IDF gcov debug stub function.
-Having data dumped target resumes its execution. Below are the steps which should be performed to do instant dump. Step 1 is already done for this example project.
-
-1. Enable OpenOCD debug stubs in menuconfig `Component config -> ESP32-specific -> OpenOCD debug stubs`.
-2. Build, flash and run program.
-3. Connect OpenOCD to the target and start telnet session with it.
-4. Run the following OpenOCD command: `esp32 gcov`
-
-Example of the command output:
-```
-> esp32 gcov
-Total trace memory: 16384 bytes
-Connect targets...
-Target halted. PRO_CPU: PC=0x400D14DA (active)    APP_CPU: PC=0x400D14DA 
-Targets connected.
-Open file 0x1 '/home/alexey/projects/esp/esp-idf/examples/system/gcov/build/main/gcov_example.gcda'
-Open file 0x1 '/home/alexey/projects/esp/esp-idf/examples/system/gcov/build/main/gcov_example.gcda'
-Open file 0x2 '/home/alexey/projects/esp/esp-idf/examples/system/gcov/build/main/gcov_example_func.gcda'
-Open file 0x2 '/home/alexey/projects/esp/esp-idf/examples/system/gcov/build/main/gcov_example_func.gcda'
-Target halted. PRO_CPU: PC=0x400844CE (active)    APP_CPU: PC=0x400855E3 
-Disconnect targets...
-Targets disconnected.
->
-```
-
-### Coverage Data Accumulation
-
-Coverage data from several dumps are automatically accumulated. So the resulting gcov data files contain statistics since the board reset. Every data dump updates files accordingly.
-New data collection is started if target has been reset.
-
-## How To Process Coverage Info
-
-There are several ways to process collected data. Two of the most common are:
-
-1. Using `gcov` tool supplied along with xtensa toolchain. See [GCOV documentation](https://gcc.gnu.org/onlinedocs/gcc/Gcov.html) for details.
-2. Using `lcov` and `genhtml` tools. This way allows to generate pretty looking coverage reports in html. This example shows how to add build target to generate such kind of reports.
-Add the following lines to you project's `Makefile` after the line including `project.mk`:
+gcovr can be installed from the package database of your operating system or directly as a Python package, e.g:
 
 ```
-GCOV := $(call dequote,$(CONFIG_TOOLPREFIX))gcov
-REPORT_DIR := $(BUILD_DIR_BASE)/coverage_report
-
-lcov-report:
-	echo "Generating coverage report in: $(REPORT_DIR)"
-	echo "Using gcov: $(GCOV)"
-	mkdir -p $(REPORT_DIR)/html
-	lcov --gcov-tool $(GCOV) -c -d $(BUILD_DIR_BASE) -o $(REPORT_DIR)/$(PROJECT_NAME).info
-	genhtml -o $(REPORT_DIR)/html $(REPORT_DIR)/$(PROJECT_NAME).info
-
-cov-data-clean:
-	echo "Remove coverage data files..."
-	find $(BUILD_DIR_BASE) -name "*.gcda" -exec rm {} +
-	rm -rf $(REPORT_DIR)
-
-.PHONY: lcov-report cov-data-clean
-```
-
-Those lines add two build targets:
-* `lcov-report` - generates html coverage report in `$(BUILD_DIR_BASE)/coverage_report/html` directory.
-* `cov-data-clean` - removes all coverage data files and reports.
-
-To generate report type the following command:
-`make lcov-report`
-
-The sample output of the command is below:
-
-```
-Generating coverage report in: /home/alexey/projects/esp/esp-idf/examples/system/gcov/build/coverage_report
-Using gcov: ~/projects/esp/crosstool-NG/builds/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcov
-Capturing coverage data from /home/alexey/projects/esp/esp-idf/examples/system/gcov/build
-Found gcov version: 5.2.0
-Scanning /home/alexey/projects/esp/esp-idf/examples/system/gcov/build for .gcda files ...
-Found 2 data files in /home/alexey/projects/esp/esp-idf/examples/system/gcov/build
-Processing main/gcov_example_func.gcda
-Processing main/gcov_example.gcda
-Finished .info-file creation
-Reading data file /home/alexey/projects/esp/esp-idf/examples/system/gcov/build/coverage_report/gcov_example.info
-Found 2 entries.
-Found common filename prefix "/home/alexey/projects/esp/esp-idf/examples/system/gcov"
-Writing .css and .png files.
-Generating output.
-Processing file main/gcov_example.c
-Processing file main/gcov_example_func.c
-Writing directory view page.
-Overall coverage rate:
-  lines......: 90.0% (18 of 20 lines)
-  functions..: 100.0% (3 of 3 functions)
+    python -m pip install gcovr
 ```

@@ -39,7 +39,7 @@ static ssize_t callback_send_inner(struct sh2lib_handle *hd, const uint8_t *data
 {
     int rv = esp_tls_conn_write(hd->http2_tls, data, length);
     if (rv <= 0) {
-        if (rv == MBEDTLS_ERR_SSL_WANT_READ || rv == MBEDTLS_ERR_SSL_WANT_WRITE) {
+        if (rv == ESP_TLS_ERR_SSL_WANT_READ || rv == ESP_TLS_ERR_SSL_WANT_WRITE) {
             rv = NGHTTP2_ERR_WOULDBLOCK;
         } else {
             rv = NGHTTP2_ERR_CALLBACK_FAILURE;
@@ -58,22 +58,19 @@ static ssize_t callback_send(nghttp2_session *session, const uint8_t *data,
     int pending_data = length;
 
     /* Send data in 1000 byte chunks */
-    while (copy_offset != (length - 1)) {
+    while (copy_offset != length) {
         int chunk_len = pending_data > 1000 ? 1000 : pending_data;
         int subrv = callback_send_inner(hd, data + copy_offset, chunk_len);
         if (subrv <= 0) {
-            if (copy_offset) {
-                /* If some data was xferred, send the number of bytes
-                 * xferred */
-                rv = copy_offset;
-            } else {
-                /* If not, send the error code */
+            if (copy_offset == 0) {
+                /* If no data is transferred, send the error code */
                 rv = subrv;
             }
             break;
         }
-        copy_offset += chunk_len;
-        pending_data -= chunk_len;
+        copy_offset += subrv;
+        pending_data -= subrv;
+        rv += subrv;
     }
     return rv;
 }
@@ -91,7 +88,7 @@ static ssize_t callback_recv(nghttp2_session *session, uint8_t *buf,
     int rv;
     rv = esp_tls_conn_read(hd->http2_tls, (char *)buf, (int)length);
     if (rv < 0) {
-        if (rv == MBEDTLS_ERR_SSL_WANT_READ || rv == MBEDTLS_ERR_SSL_WANT_WRITE) {
+        if (rv == ESP_TLS_ERR_SSL_WANT_READ || rv == ESP_TLS_ERR_SSL_WANT_WRITE) {
             rv = NGHTTP2_ERR_WOULDBLOCK;
         } else {
             rv = NGHTTP2_ERR_CALLBACK_FAILURE;
@@ -245,7 +242,8 @@ int sh2lib_connect(struct sh2lib_handle *hd, const char *uri)
     esp_tls_cfg_t tls_cfg = {
         .alpn_protos = proto,
         .non_block = true,
-    };    
+        .timeout_ms = 10 * 1000,
+    };
     if ((hd->http2_tls = esp_tls_conn_http_new(uri, &tls_cfg)) == NULL) {
         ESP_LOGE(TAG, "[sh2-connect] esp-tls connection failed");
         goto error;
@@ -369,4 +367,3 @@ int sh2lib_do_put(struct sh2lib_handle *hd, const char *path,
                              };
     return sh2lib_do_putpost_with_nv(hd, nva, sizeof(nva) / sizeof(nva[0]), send_cb, recv_cb);
 }
-

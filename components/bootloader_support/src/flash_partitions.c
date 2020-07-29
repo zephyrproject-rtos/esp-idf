@@ -14,13 +14,12 @@
 #include <string.h>
 #include "esp_flash_partitions.h"
 #include "esp_log.h"
-#include "rom/spi_flash.h"
-#include "rom/md5_hash.h"
-#include "esp_flash_data_types.h"
+#include "esp32/rom/spi_flash.h"
+#include "esp32/rom/md5_hash.h"
 
 static const char *TAG = "flash_parts";
 
-esp_err_t esp_partition_table_basic_verify(const esp_partition_info_t *partition_table, bool log_errors, int *num_partitions)
+esp_err_t esp_partition_table_verify(const esp_partition_info_t *partition_table, bool log_errors, int *num_partitions)
 {
     int md5_found = 0;
     int num_parts;

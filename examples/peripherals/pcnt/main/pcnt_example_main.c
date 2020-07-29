@@ -20,7 +20,6 @@
 #include "driver/pcnt.h"
 #include "esp_attr.h"
 #include "esp_log.h"
-#include "soc/gpio_sig_map.h"
 
 /**
  * TEST CODE BRIEF
@@ -54,6 +53,7 @@
 #define LEDC_OUTPUT_IO      18 // Output GPIO of a sample 1 Hz pulse generator
 
 xQueueHandle pcnt_evt_queue;   // A queue to handle pulse counter events
+pcnt_isr_handle_t user_isr_handle = NULL; //user's ISR service handle
 
 /* A sample structure to pass events from the PCNT
  * interrupt handler to the main program.
@@ -96,20 +96,22 @@ static void ledc_init(void)
 {
     // Prepare and then apply the LEDC PWM timer configuration
     ledc_timer_config_t ledc_timer;
-    ledc_timer.speed_mode       = LEDC_HIGH_SPEED_MODE;
+    ledc_timer.speed_mode       = LEDC_LOW_SPEED_MODE;
     ledc_timer.timer_num        = LEDC_TIMER_1;
     ledc_timer.duty_resolution  = LEDC_TIMER_10_BIT;
     ledc_timer.freq_hz          = 1;  // set output frequency at 1 Hz
+    ledc_timer.clk_cfg = LEDC_AUTO_CLK;
     ledc_timer_config(&ledc_timer);
 
     // Prepare and then apply the LEDC PWM channel configuration
     ledc_channel_config_t ledc_channel;
-    ledc_channel.speed_mode = LEDC_HIGH_SPEED_MODE;
+    ledc_channel.speed_mode = LEDC_LOW_SPEED_MODE;
     ledc_channel.channel    = LEDC_CHANNEL_1;
     ledc_channel.timer_sel  = LEDC_TIMER_1;
     ledc_channel.intr_type  = LEDC_INTR_DISABLE;
     ledc_channel.gpio_num   = LEDC_OUTPUT_IO;
     ledc_channel.duty       = 100; // set duty at about 10%
+    ledc_channel.hpoint     = 0;
     ledc_channel_config(&ledc_channel);
 }
 
@@ -159,14 +161,14 @@ static void pcnt_example_init(void)
     pcnt_counter_clear(PCNT_TEST_UNIT);
 
     /* Register ISR handler and enable interrupts for PCNT unit */
-    pcnt_isr_register(pcnt_example_intr_handler, NULL, 0, NULL);
+    pcnt_isr_register(pcnt_example_intr_handler, NULL, 0, &user_isr_handle);
     pcnt_intr_enable(PCNT_TEST_UNIT);
 
     /* Everything is set up, now go to counting */
     pcnt_counter_resume(PCNT_TEST_UNIT);
 }
 
-void app_main()
+void app_main(void)
 {
     /* Initialize LEDC to generate sample pulse signal */
     ledc_init();
@@ -186,24 +188,29 @@ void app_main()
         if (res == pdTRUE) {
             pcnt_get_counter_value(PCNT_TEST_UNIT, &count);
             printf("Event PCNT unit[%d]; cnt: %d\n", evt.unit, count);
-            if (evt.status & PCNT_STATUS_THRES1_M) {
+            if (evt.status & PCNT_EVT_THRES_1) {
                 printf("THRES1 EVT\n");
             }
-            if (evt.status & PCNT_STATUS_THRES0_M) {
+            if (evt.status & PCNT_EVT_THRES_0) {
                 printf("THRES0 EVT\n");
             }
-            if (evt.status & PCNT_STATUS_L_LIM_M) {
+            if (evt.status & PCNT_EVT_L_LIM) {
                 printf("L_LIM EVT\n");
             }
-            if (evt.status & PCNT_STATUS_H_LIM_M) {
+            if (evt.status & PCNT_EVT_H_LIM) {
                 printf("H_LIM EVT\n");
             }
-            if (evt.status & PCNT_STATUS_ZERO_M) {
+            if (evt.status & PCNT_EVT_ZERO) {
                 printf("ZERO EVT\n");
             }
         } else {
             pcnt_get_counter_value(PCNT_TEST_UNIT, &count);
             printf("Current counter value :%d\n", count);
         }
+    }
+    if(user_isr_handle) {
+        //Free the ISR service handle.
+        esp_intr_free(user_isr_handle);
+        user_isr_handle = NULL;
     }
 }

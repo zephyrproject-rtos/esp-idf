@@ -4,22 +4,53 @@ SD SPI Host Driver
 Overview
 --------
 
-SPI controllers accessible via spi_master driver (HSPI, VSPI) can be used to work with SD cards. The driver which provides this capability is called "SD SPI Host", due to its similarity with the :doc:`SDMMC Host <sdmmc_host>` driver.
+The SD SPI host driver allows communicating with one or more SD cards by the SPI Master driver which makes use of the SPI host. Each card is accessed through an SD SPI device represented by an `sdspi_dev_handle_t` spi_handle returned when attaching the device to an SPI bus by calling `sdspi_host_init_device`. The bus should be already initialized before (by `spi_bus_initialize`).
 
-In SPI mode, SD driver has lower throughput than in 1-line SD mode. However SPI mode makes pin selection more flexible, as SPI peripheral can be connected to any ESP32 pins using GPIO Matrix. SD SPI driver uses software controlled CS signal. Currently SD SPI driver assumes that it can use the SPI controller exclusively, so applications which need to share SPI bus between SD cards and other peripherals need to make sure that SD card and other devices are not used at the same time from different tasks. 
+.. only:: esp32
 
-SD SPI driver is represented using an :cpp:class:`sdmmc_host_t` structure initialized using :c:macro:`SDSPI_HOST_DEFAULT` macro. For slot initialization, :c:macro:`SDSPI_SLOT_CONFIG_DEFAULT` can be used to fill in default pin mapping, which is the same as the pin mapping in SD mode.
+    This driver's naming pattern was adopted from the :doc:`SDMMC Host <sdmmc_host>` driver due to their similarity. Likewise, the APIs of both drivers are also very similar.
 
-SD SPI driver APIs are very similar to :doc:`SDMMC host APIs <sdmmc_host>`. As with the SDMMC host driver, only :cpp:func:`sdspi_host_init`, :cpp:func:`sdspi_host_init_slot`, and :cpp:func:`sdspi_host_deinit` functions are normally used by the applications. Other functions are called by the protocol level driver via function pointers in :cpp:class:`sdmmc_host_t` structure.
+    SD SPI driver (access the SD card in SPI mode) offers lower throughput but makes pin selection more flexible. With the help of the GPIO matrix, an SPI peripheral's signals can be routed to any {IDF_TARGET_NAME} pin. Otherwise, if SDMMC host driver is used (See :doc:`SDMMC Host <sdmmc_host>`) to access the card in SD 1-bit/4-bit mode, higher throughput can be reached but it requires routing the signals through their dedicated IO_MUX pins only.
 
-.. note:
-	
-	SD over SPI does not support speeds above SDMMC_FREQ_DEFAULT due to a limitation of SPI driver.
+With the help of :doc:`SPI Master driver <spi_master>` based on, the SPI bus can be shared among SD cards and other SPI devices. The SPI Master driver will handle exclusive access from different tasks.
 
-See :doc:`SD/SDIO/MMC Driver <../storage/sdmmc>` for the higher level driver which implements the protocol layer.
+The SD SPI driver uses software-controlled CS signal.
+
+How to Use
+----------
+
+Firstly, use the macro :c:macro:`SDSPI_DEVICE_CONFIG_DEFAULT` to initialize a structure :cpp:type:`sdmmc_slot_config_t`, which is used to initialize an SD SPI device. This macro will also fill in the default pin mappings, which is same as the pin mappings of SDMMC host driver. Modify the host and pins of the structure to desired value. Then call `sdspi_host_init_device` to initialize the SD SPI device and attach to its bus.
+
+Then use :c:macro:`SDSPI_HOST_DEFAULT` macro to initialize a :cpp:type:`sdmmc_host_t` structure, which is used to store the state and configurations of upper layer (SD/SDIO/MMC driver). Modify the `slot` parameter of the structure to the SD SPI device spi_handle just returned from `sdspi_host_init_device`. Call `sdmmc_card_init` with the :cpp:type:`sdmmc_host_t` to probe and initialize the SD card.
+
+Now you can use SD/SDIO/MMC driver functions to access your card!
+
+Other Details
+-------------
+
+Only the following driver's API functions are normally used by most applications:
+
+- :cpp:func:`sdspi_host_init`
+- :cpp:func:`sdspi_host_init_device`
+- :cpp:func:`sdspi_host_remove_device`
+- :cpp:func:`sdspi_host_deinit`
+
+Other functions are mostly used by the protocol level SD/SDIO/MMC driver via function pointers in the :cpp:type:`sdmmc_host_t` structure. For more details, see :doc:`the SD/SDIO/MMC Driver <../storage/sdmmc>`.
+
+.. note::
+
+    SD over SPI does not support speeds above :c:macro:`SDMMC_FREQ_DEFAULT` due to the limitations of the SPI driver.
+
+
+.. todo
+
+..    The SD SPI API reference could use more detail such as:
+..    - Configuration. What are some key points of concern regarding slot configuration.
+..    - Which function/how is a transaction done?
+..    - Are there code snippets or corresponding application examples?
 
 
 API Reference
 -------------
 
-.. include:: /_build/inc/sdspi_host.inc
+.. include-build-file:: inc/sdspi_host.inc

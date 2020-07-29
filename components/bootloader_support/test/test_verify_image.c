@@ -5,7 +5,6 @@
 #include <esp_types.h>
 #include <stdio.h>
 #include "string.h"
-#include "rom/ets_sys.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -14,6 +13,7 @@
 #include "freertos/xtensa_api.h"
 #include "unity.h"
 #include "bootloader_common.h"
+#include "bootloader_util.h"
 #include "esp_partition.h"
 #include "esp_ota_ops.h"
 #include "esp_image_format.h"
@@ -25,7 +25,7 @@ TEST_CASE("Verify bootloader image in flash", "[bootloader_support]")
         .size = ESP_PARTITION_TABLE_OFFSET - ESP_BOOTLOADER_OFFSET,
     };
     esp_image_metadata_t data = { 0 };
-    TEST_ASSERT_EQUAL_HEX(ESP_OK, esp_image_load(ESP_IMAGE_VERIFY, &fake_bootloader_partition, &data));
+    TEST_ASSERT_EQUAL_HEX(ESP_OK, esp_image_verify(ESP_IMAGE_VERIFY, &fake_bootloader_partition, &data));
     TEST_ASSERT_NOT_EQUAL(0, data.image_len);
 
     uint32_t bootloader_length = 0;
@@ -33,6 +33,7 @@ TEST_CASE("Verify bootloader image in flash", "[bootloader_support]")
     TEST_ASSERT_EQUAL(data.image_len, bootloader_length);
 }
 
+#if !TEMPORARY_DISABLED_FOR_TARGETS(ESP32S2)
 TEST_CASE("Verify unit test app image", "[bootloader_support]")
 {
     esp_image_metadata_t data = { 0 };
@@ -43,10 +44,11 @@ TEST_CASE("Verify unit test app image", "[bootloader_support]")
         .size = running->size,
     };
 
-    TEST_ASSERT_EQUAL_HEX(ESP_OK, esp_image_load(ESP_IMAGE_VERIFY, &running_pos, &data));
+    TEST_ASSERT_EQUAL_HEX(ESP_OK, esp_image_verify(ESP_IMAGE_VERIFY, &running_pos, &data));
     TEST_ASSERT_NOT_EQUAL(0, data.image_len);
     TEST_ASSERT_TRUE(data.image_len <= running->size);
 }
+#endif
 
 void check_label_search (int num_test, const char *list, const char *t_label, bool result)
 {
@@ -91,4 +93,24 @@ TEST_CASE("Test label_search", "[bootloader_support]")
     check_label_search(24,  "1234567890123456, phy, nvs1",  "12345678901234567",    true);
     check_label_search(25,  "phy, 1234567890123456, nvs1",  "12345678901234567",    true);
 
+}
+
+
+TEST_CASE("Test regions_overlap", "[bootloader_support]")
+{
+    TEST_ASSERT( bootloader_util_regions_overlap(1, 2, 1, 2) );
+
+    TEST_ASSERT( bootloader_util_regions_overlap(1, 2, 0, 2) );
+    TEST_ASSERT( bootloader_util_regions_overlap(1, 2, 1, 3) );
+    TEST_ASSERT( bootloader_util_regions_overlap(1, 2, 0, 3) );
+
+    TEST_ASSERT( bootloader_util_regions_overlap(0, 2, 1, 2) );
+    TEST_ASSERT( bootloader_util_regions_overlap(1, 3, 1, 2) );
+    TEST_ASSERT( bootloader_util_regions_overlap(0, 3, 1, 2) );
+
+    TEST_ASSERT( !bootloader_util_regions_overlap(2, 3, 1, 2) );
+    TEST_ASSERT( !bootloader_util_regions_overlap(1, 2, 2, 3) );
+
+    TEST_ASSERT( !bootloader_util_regions_overlap(3, 4, 1, 2) );
+    TEST_ASSERT( !bootloader_util_regions_overlap(1, 2, 3, 4) );
 }

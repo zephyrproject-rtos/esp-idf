@@ -13,6 +13,7 @@
 #include "nvs_flash.h"
 #include "soc/rtc_cntl_reg.h"
 #include "soc/sens_reg.h"
+#include "soc/rtc_periph.h"
 #include "driver/gpio.h"
 #include "driver/rtc_io.h"
 #include "esp32/ulp.h"
@@ -21,10 +22,10 @@
 extern const uint8_t ulp_main_bin_start[] asm("_binary_ulp_main_bin_start");
 extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_main_bin_end");
 
-static void init_ulp_program();
-static void update_pulse_count();
+static void init_ulp_program(void);
+static void update_pulse_count(void);
 
-void app_main()
+void app_main(void)
 {
     esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
     if (cause != ESP_SLEEP_WAKEUP_ULP) {
@@ -40,11 +41,16 @@ void app_main()
     esp_deep_sleep_start();
 }
 
-static void init_ulp_program()
+static void init_ulp_program(void)
 {
     esp_err_t err = ulp_load_binary(0, ulp_main_bin_start,
             (ulp_main_bin_end - ulp_main_bin_start) / sizeof(uint32_t));
     ESP_ERROR_CHECK(err);
+
+    /* GPIO used for pulse counting. */
+    gpio_num_t gpio_num = GPIO_NUM_0;
+    int rtcio_num = rtc_io_number_get(gpio_num);
+    assert(rtc_gpio_is_valid_gpio(gpio_num) && "GPIO used for pulse counting must be an RTC IO");
 
     /* Initialize some variables used by ULP program.
      * Each 'ulp_xyz' variable corresponds to 'xyz' variable in the ULP program.
@@ -58,11 +64,11 @@ static void init_ulp_program()
     ulp_debounce_counter = 3;
     ulp_debounce_max_count = 3;
     ulp_next_edge = 0;
-    ulp_io_number = 11; /* GPIO0 is RTC_IO 11 */
+    ulp_io_number = rtcio_num; /* map from GPIO# to RTC_IO# */
     ulp_edge_count_to_wake_up = 10;
 
-    /* Initialize GPIO0 as RTC IO, input, disable pullup and pulldown */
-    gpio_num_t gpio_num = GPIO_NUM_0;
+    /* Initialize selected GPIO as RTC IO, enable input, disable pullup and pulldown */
+    rtc_gpio_init(gpio_num);
     rtc_gpio_set_direction(gpio_num, RTC_GPIO_MODE_INPUT_ONLY);
     rtc_gpio_pulldown_dis(gpio_num);
     rtc_gpio_pullup_dis(gpio_num);
@@ -70,29 +76,29 @@ static void init_ulp_program()
 
     /* Disconnect GPIO12 and GPIO15 to remove current drain through
      * pullup/pulldown resistors.
-     * GPIO15 may be connected to ground to suppress boot messages.
      * GPIO12 may be pulled high to select flash voltage.
      */
     rtc_gpio_isolate(GPIO_NUM_12);
     rtc_gpio_isolate(GPIO_NUM_15);
+    esp_deep_sleep_disable_rom_logging(); // suppress boot messages
 
-    /* Set ULP wake up period to T = 20ms (3095 cycles of RTC_SLOW_CLK clock).
+    /* Set ULP wake up period to T = 20ms.
      * Minimum pulse width has to be T * (ulp_debounce_counter + 1) = 80ms.
      */
-    REG_SET_FIELD(SENS_ULP_CP_SLEEP_CYC0_REG, SENS_SLEEP_CYCLES_S0, 3095);
+    ulp_set_wakeup_period(0, 20000);
 
     /* Start the program */
-    err = ulp_run((&ulp_entry - RTC_SLOW_MEM) / sizeof(uint32_t));
+    err = ulp_run(&ulp_entry - RTC_SLOW_MEM);
     ESP_ERROR_CHECK(err);
 }
 
-static void update_pulse_count()
+static void update_pulse_count(void)
 {
     const char* namespace = "plusecnt";
     const char* count_key = "count";
 
     ESP_ERROR_CHECK( nvs_flash_init() );
-    nvs_handle handle;
+    nvs_handle_t handle;
     ESP_ERROR_CHECK( nvs_open(namespace, NVS_READWRITE, &handle));
     uint32_t pulse_count = 0;
     esp_err_t err = nvs_get_u32(handle, count_key, &pulse_count);

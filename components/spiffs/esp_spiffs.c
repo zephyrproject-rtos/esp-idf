@@ -29,30 +29,20 @@
 #include <sys/lock.h>
 #include "esp_vfs.h"
 #include "esp_err.h"
-#include "rom/spi_flash.h"
+#include "esp32/rom/spi_flash.h"
+#include "spiffs_api.h"
 
-static const char * TAG = "SPIFFS";
+static const char* TAG = "SPIFFS";
 
 #ifdef CONFIG_SPIFFS_USE_MTIME
-_Static_assert(CONFIG_SPIFFS_META_LENGTH >= sizeof(time_t),
-        "SPIFFS_META_LENGTH size should be >= sizeof(time_t)");
+#ifdef CONFIG_SPIFFS_MTIME_WIDE_64_BITS
+typedef time_t spiffs_time_t;
+#else
+typedef unsigned long spiffs_time_t;
+#endif
+_Static_assert(CONFIG_SPIFFS_META_LENGTH >= sizeof(spiffs_time_t),
+        "SPIFFS_META_LENGTH size should be >= sizeof(spiffs_time_t)");
 #endif //CONFIG_SPIFFS_USE_MTIME
-/**
- * @brief SPIFFS definition structure
- */
-typedef struct {
-    spiffs *fs;                             /*!< Handle to the underlying SPIFFS */
-    SemaphoreHandle_t lock;                 /*!< FS lock */
-    const esp_partition_t* partition;       /*!< The partition on which SPIFFS is located */
-    char base_path[ESP_VFS_PATH_MAX+1];     /*!< Mount point */
-    bool by_label;                          /*!< Partition was mounted by label */
-    spiffs_config cfg;                      /*!< SPIFFS Mount configuration */
-    uint8_t *work;                          /*!< Work Buffer */
-    uint8_t *fds;                           /*!< File Descriptor Buffer */
-    uint32_t fds_sz;                        /*!< File Descriptor Buffer Length */
-    uint8_t *cache;                         /*!< Cache Buffer */
-    uint32_t cache_sz;                      /*!< Cache Buffer Length */
-} esp_spiffs_t;
 
 /**
  * @brief SPIFFS DIR structure
@@ -71,6 +61,7 @@ static ssize_t vfs_spiffs_read(void* ctx, int fd, void * dst, size_t size);
 static int vfs_spiffs_close(void* ctx, int fd);
 static off_t vfs_spiffs_lseek(void* ctx, int fd, off_t offset, int mode);
 static int vfs_spiffs_fstat(void* ctx, int fd, struct stat * st);
+#ifdef CONFIG_VFS_SUPPORT_DIR
 static int vfs_spiffs_stat(void* ctx, const char * path, struct stat * st);
 static int vfs_spiffs_unlink(void* ctx, const char *path);
 static int vfs_spiffs_link(void* ctx, const char* n1, const char* n2);
@@ -84,81 +75,14 @@ static long vfs_spiffs_telldir(void* ctx, DIR* pdir);
 static void vfs_spiffs_seekdir(void* ctx, DIR* pdir, long offset);
 static int vfs_spiffs_mkdir(void* ctx, const char* name, mode_t mode);
 static int vfs_spiffs_rmdir(void* ctx, const char* name);
+#ifdef CONFIG_SPIFFS_USE_MTIME
+static int vfs_spiffs_utime(void *ctx, const char *path, const struct utimbuf *times);
+#endif // CONFIG_SPIFFS_USE_MTIME
+#endif // CONFIG_VFS_SUPPORT_DIR
 static void vfs_spiffs_update_mtime(spiffs *fs, spiffs_file f);
 static time_t vfs_spiffs_get_mtime(const spiffs_stat* s);
 
 static esp_spiffs_t * _efs[CONFIG_SPIFFS_MAX_PARTITIONS];
-
-void spiffs_api_lock(spiffs *fs)
-{
-    xSemaphoreTake(((esp_spiffs_t *)(fs->user_data))->lock, portMAX_DELAY);
-}
-
-void spiffs_api_unlock(spiffs *fs)
-{
-    xSemaphoreGive(((esp_spiffs_t *)(fs->user_data))->lock);
-}
-
-static s32_t spiffs_api_read(spiffs *fs, uint32_t addr, uint32_t size, uint8_t *dst)
-{
-    esp_err_t err = esp_partition_read(((esp_spiffs_t *)(fs->user_data))->partition, 
-                                        addr, dst, size);
-    if (err) {
-        ESP_LOGE(TAG, "failed to read addr %08x, size %08x, err %d", addr, size, err);
-        return -1;
-    }
-    return 0;
-}
-
-static s32_t spiffs_api_write(spiffs *fs, uint32_t addr, uint32_t size, uint8_t *src)
-{
-    esp_err_t err = esp_partition_write(((esp_spiffs_t *)(fs->user_data))->partition, 
-                                        addr, src, size);
-    if (err) {
-        ESP_LOGE(TAG, "failed to write addr %08x, size %08x, err %d", addr, size, err);
-        return -1;
-    }
-    return 0;
-}
-
-static s32_t spiffs_api_erase(spiffs *fs, uint32_t addr, uint32_t size)
-{
-    esp_err_t err = esp_partition_erase_range(((esp_spiffs_t *)(fs->user_data))->partition, 
-                                        addr, size);
-    if (err) {
-        ESP_LOGE(TAG, "failed to erase addr %08x, size %08x, err %d", addr, size, err);
-        return -1;
-    }
-    return 0;
-}
-
-static void spiffs_api_check(spiffs *fs, spiffs_check_type type, 
-                            spiffs_check_report report, uint32_t arg1, uint32_t arg2)
-{
-    static const char * spiffs_check_type_str[3] = {
-        "LOOKUP",
-        "INDEX",
-        "PAGE"
-    };
-
-    static const char * spiffs_check_report_str[7] = {
-        "PROGRESS",
-        "ERROR",
-        "FIX INDEX",
-        "FIX LOOKUP",
-        "DELETE ORPHANED INDEX",
-        "DELETE PAGE",
-        "DELETE BAD FILE"
-    };
-
-    if (report != SPIFFS_CHECK_PROGRESS) {
-        ESP_LOGE(TAG, "CHECK: type:%s, report:%s, %x:%x", spiffs_check_type_str[type], 
-                              spiffs_check_report_str[report], arg1, arg2);
-    } else {
-        ESP_LOGV(TAG, "CHECK PROGRESS: report:%s, %x:%x", 
-                              spiffs_check_report_str[report], arg1, arg2);
-    }
-}
 
 static void esp_spiffs_free(esp_spiffs_t ** efs)
 {
@@ -232,7 +156,7 @@ static esp_err_t esp_spiffs_init(const esp_vfs_spiffs_conf_t* conf)
 
     esp_partition_subtype_t subtype = conf->partition_label ?
             ESP_PARTITION_SUBTYPE_ANY : ESP_PARTITION_SUBTYPE_DATA_SPIFFS;
-    const esp_partition_t* partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, 
+    const esp_partition_t* partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA,
                                       subtype, conf->partition_label);
     if (!partition) {
         ESP_LOGE(TAG, "spiffs partition could not be found");
@@ -310,7 +234,7 @@ static esp_err_t esp_spiffs_init(const esp_vfs_spiffs_conf_t* conf)
     efs->fs->user_data = (void *)efs;
     efs->partition = partition;
 
-    s32_t res = SPIFFS_mount(efs->fs, &efs->cfg, efs->work, efs->fds, efs->fds_sz, 
+    s32_t res = SPIFFS_mount(efs->fs, &efs->cfg, efs->work, efs->fds, efs->fds_sz,
                             efs->cache, efs->cache_sz, spiffs_api_check);
 
     if (conf->format_if_mount_failed && res != SPIFFS_OK) {
@@ -323,7 +247,7 @@ static esp_err_t esp_spiffs_init(const esp_vfs_spiffs_conf_t* conf)
             esp_spiffs_free(&efs);
             return ESP_FAIL;
         }
-        res = SPIFFS_mount(efs->fs, &efs->cfg, efs->work, efs->fds, efs->fds_sz, 
+        res = SPIFFS_mount(efs->fs, &efs->cfg, efs->work, efs->fds, efs->fds_sz,
                             efs->cache, efs->cache_sz, spiffs_api_check);
     }
     if (res != SPIFFS_OK) {
@@ -422,6 +346,7 @@ esp_err_t esp_vfs_spiffs_register(const esp_vfs_spiffs_conf_t * conf)
         .open_p = &vfs_spiffs_open,
         .close_p = &vfs_spiffs_close,
         .fstat_p = &vfs_spiffs_fstat,
+#ifdef CONFIG_VFS_SUPPORT_DIR
         .stat_p = &vfs_spiffs_stat,
         .link_p = &vfs_spiffs_link,
         .unlink_p = &vfs_spiffs_unlink,
@@ -433,7 +358,13 @@ esp_err_t esp_vfs_spiffs_register(const esp_vfs_spiffs_conf_t * conf)
         .seekdir_p = &vfs_spiffs_seekdir,
         .telldir_p = &vfs_spiffs_telldir,
         .mkdir_p = &vfs_spiffs_mkdir,
-        .rmdir_p = &vfs_spiffs_rmdir
+        .rmdir_p = &vfs_spiffs_rmdir,
+#ifdef CONFIG_SPIFFS_USE_MTIME
+        .utime_p = &vfs_spiffs_utime,
+#else
+        .utime_p = NULL,
+#endif // CONFIG_SPIFFS_USE_MTIME
+#endif // CONFIG_VFS_SUPPORT_DIR
     };
 
     esp_err_t err = esp_spiffs_init(conf);
@@ -613,6 +544,8 @@ static int vfs_spiffs_fstat(void* ctx, int fd, struct stat * st)
     return res;
 }
 
+#ifdef CONFIG_VFS_SUPPORT_DIR
+
 static int vfs_spiffs_stat(void* ctx, const char * path, struct stat * st)
 {
     assert(path);
@@ -710,27 +643,30 @@ static struct dirent* vfs_spiffs_readdir(void* ctx, DIR* pdir)
     return out_dirent;
 }
 
-static int vfs_spiffs_readdir_r(void* ctx, DIR* pdir, struct dirent* entry, 
+static int vfs_spiffs_readdir_r(void* ctx, DIR* pdir, struct dirent* entry,
                                 struct dirent** out_dirent)
 {
     assert(pdir);
     esp_spiffs_t * efs = (esp_spiffs_t *)ctx;
     vfs_spiffs_dir_t * dir = (vfs_spiffs_dir_t *)pdir;
     struct spiffs_dirent out;
-    if (SPIFFS_readdir(&dir->d, &out) == 0) {
-        errno = spiffs_res_to_errno(SPIFFS_errno(efs->fs));
-        SPIFFS_clearerr(efs->fs);
-        if (!errno) {
-            *out_dirent = NULL;
+    size_t plen;
+    char * item_name;
+    do {
+        if (SPIFFS_readdir(&dir->d, &out) == 0) {
+            errno = spiffs_res_to_errno(SPIFFS_errno(efs->fs));
+            SPIFFS_clearerr(efs->fs);
+            if (!errno) {
+                *out_dirent = NULL;
+            }
+            return errno;
         }
-        return errno;
-    }
-    const char * item_name = (const char *)out.name;
-    size_t plen = strlen(dir->path);
+        item_name = (char *)out.name;
+        plen = strlen(dir->path);
+
+    } while ((plen > 1) && (strncasecmp(dir->path, (const char*)out.name, plen) || out.name[plen] != '/' || !out.name[plen + 1]));
+
     if (plen > 1) {
-        if (strncasecmp(dir->path, (const char *)out.name, plen) || out.name[plen] != '/' || !out.name[plen+1]) {
-            return vfs_spiffs_readdir_r(ctx, pdir, entry, out_dirent);
-        }
         item_name += plen + 1;
     } else if (item_name[0] == '/') {
         item_name++;
@@ -800,10 +736,58 @@ static int vfs_spiffs_link(void* ctx, const char* n1, const char* n2)
     return -1;
 }
 
+#ifdef CONFIG_SPIFFS_USE_MTIME
+static int vfs_spiffs_update_mtime_value(spiffs *fs, const char *path, spiffs_time_t t)
+{
+    int ret = SPIFFS_OK;
+    spiffs_stat s;
+    if (CONFIG_SPIFFS_META_LENGTH > sizeof(t)) {
+        ret = SPIFFS_stat(fs, path, &s);
+    }
+    if (ret == SPIFFS_OK) {
+        memcpy(s.meta, &t, sizeof(t));
+        ret = SPIFFS_update_meta(fs, path, s.meta);
+    }
+    if (ret != SPIFFS_OK) {
+        ESP_LOGW(TAG, "Failed to update mtime (%d)", ret);
+    }
+    return ret;
+}
+#endif //CONFIG_SPIFFS_USE_MTIME
+
+#ifdef CONFIG_SPIFFS_USE_MTIME
+static int vfs_spiffs_utime(void *ctx, const char *path, const struct utimbuf *times)
+{
+    assert(path);
+
+    esp_spiffs_t *efs = (esp_spiffs_t *) ctx;
+    spiffs_time_t t;
+
+    if (times) {
+        t = (spiffs_time_t)times->modtime;
+    } else {
+        // use current time
+        t = (spiffs_time_t)time(NULL);
+    }
+
+    int ret = vfs_spiffs_update_mtime_value(efs->fs, path, t);
+
+    if (ret != SPIFFS_OK) {
+        errno = spiffs_res_to_errno(SPIFFS_errno(efs->fs));
+        SPIFFS_clearerr(efs->fs);
+        return -1;
+    }
+
+    return 0;
+}
+#endif //CONFIG_SPIFFS_USE_MTIME
+
+#endif // CONFIG_VFS_SUPPORT_DIR
+
 static void vfs_spiffs_update_mtime(spiffs *fs, spiffs_file fd)
 {
 #ifdef CONFIG_SPIFFS_USE_MTIME
-    time_t t = time(NULL);
+    spiffs_time_t t = (spiffs_time_t)time(NULL);
     spiffs_stat s;
     int ret = SPIFFS_OK;
     if (CONFIG_SPIFFS_META_LENGTH > sizeof(t)) {
@@ -821,9 +805,11 @@ static void vfs_spiffs_update_mtime(spiffs *fs, spiffs_file fd)
 
 static time_t vfs_spiffs_get_mtime(const spiffs_stat* s)
 {
-    time_t t = 0;
 #ifdef CONFIG_SPIFFS_USE_MTIME
+    spiffs_time_t t = 0;
     memcpy(&t, s->meta, sizeof(t));
+#else
+    time_t t = 0;
 #endif
-    return t;
+    return (time_t)t;
 }

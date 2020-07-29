@@ -33,8 +33,14 @@
 void *multi_heap_malloc(multi_heap_handle_t heap, size_t size)
     __attribute__((alias("multi_heap_malloc_impl")));
 
+void *multi_heap_aligned_alloc(multi_heap_handle_t heap, size_t size, size_t alignment)
+    __attribute__((alias("multi_heap_aligned_alloc_impl")));
+
 void multi_heap_free(multi_heap_handle_t heap, void *p)
     __attribute__((alias("multi_heap_free_impl")));
+
+void multi_heap_aligned_free(multi_heap_handle_t heap, void *p)
+    __attribute__((alias("multi_heap_aligned_free_impl")));
 
 void *multi_heap_realloc(multi_heap_handle_t heap, void *p, size_t size)
     __attribute__((alias("multi_heap_realloc_impl")));
@@ -66,6 +72,7 @@ void *multi_heap_get_block_owner(multi_heap_block_handle_t block)
 
 #define ALIGN(X) ((X) & ~(sizeof(void *)-1))
 #define ALIGN_UP(X) ALIGN((X)+sizeof(void *)-1)
+#define ALIGN_UP_BY(num, align) (((num) + ((align) - 1)) & ~((align) - 1))
 
 struct heap_block;
 
@@ -326,18 +333,21 @@ size_t multi_heap_get_allocated_size_impl(multi_heap_handle_t heap, void *p)
     return block_data_size(pb);
 }
 
-multi_heap_handle_t multi_heap_register_impl(void *start, size_t size)
+multi_heap_handle_t multi_heap_register_impl(void *start_ptr, size_t size)
 {
-    heap_t *heap = (heap_t *)ALIGN_UP((intptr_t)start);
-    uintptr_t end = ALIGN((uintptr_t)start + size);
-    if (end - (uintptr_t)start < sizeof(heap_t) + 2*sizeof(heap_block_t)) {
+    uintptr_t start = ALIGN_UP((uintptr_t)start_ptr);
+    uintptr_t end = ALIGN((uintptr_t)start_ptr + size);
+    heap_t *heap = (heap_t *)start;
+    size = end - start;
+
+    if (end < start || size < sizeof(heap_t) + 2*sizeof(heap_block_t)) {
         return NULL; /* 'size' is too small to fit a heap here */
     }
     heap->lock = NULL;
     heap->last_block = (heap_block_t *)(end - sizeof(heap_block_t));
 
     /* first 'real' (allocatable) free block goes after the heap structure */
-    heap_block_t *first_free_block = (heap_block_t *)((intptr_t)start + sizeof(heap_t));
+    heap_block_t *first_free_block = (heap_block_t *)(start + sizeof(heap_t));
     first_free_block->header = (intptr_t)heap->last_block | BLOCK_FREE_FLAG;
     first_free_block->next_free = heap->last_block;
 
@@ -356,7 +366,7 @@ multi_heap_handle_t multi_heap_register_impl(void *start, size_t size)
        - minus header of first_free_block
        - minus whole block at heap->last_block
     */
-    heap->free_bytes = ALIGN(size) - sizeof(heap_t) - sizeof(first_free_block->header) - sizeof(heap_block_t);
+    heap->free_bytes = size - sizeof(heap_t) - sizeof(first_free_block->header) - sizeof(heap_block_t);
     heap->minimum_free_bytes = heap->free_bytes;
 
     return heap;
@@ -458,6 +468,62 @@ void *multi_heap_malloc_impl(multi_heap_handle_t heap, size_t size)
     multi_heap_internal_unlock(heap);
 
     return best_block->data;
+}
+
+void *multi_heap_aligned_alloc_impl(multi_heap_handle_t heap, size_t size, size_t alignment)
+{
+    if (heap == NULL) {
+        return NULL;
+    }
+
+    if (!size) {
+        return NULL;
+    }
+
+    if (!alignment) {
+        return NULL;
+    }
+
+    //Alignment must be a power of two...
+    if ((alignment & (alignment - 1)) != 0) {
+        return NULL;
+    }
+
+    uint32_t overhead = (sizeof(uint32_t) + (alignment - 1));
+
+    multi_heap_internal_lock(heap);
+    void *head = multi_heap_malloc_impl(heap, size + overhead);
+    if (head == NULL) {
+        multi_heap_internal_unlock(heap);
+        return NULL;
+    }
+
+    //Lets align our new obtained block address:
+    //and save information to recover original block pointer
+    //to allow us to deallocate the memory when needed
+    void *ptr = (void *)ALIGN_UP_BY((uintptr_t)head + sizeof(uint32_t), alignment);
+    *((uint32_t *)ptr - 1) = (uint32_t)((uintptr_t)ptr - (uintptr_t)head);
+
+    multi_heap_internal_unlock(heap);
+    return ptr;
+}
+
+void multi_heap_aligned_free_impl(multi_heap_handle_t heap, void *p)
+{
+    if (p == NULL) {
+        return;
+    }
+
+    multi_heap_internal_lock(heap);
+    uint32_t offset = *((uint32_t *)p - 1);
+    void *block_head = (void *)((uint8_t *)p - offset);
+
+#ifdef MULTI_HEAP_POISONING_SLOW
+        multi_heap_internal_poison_fill_region(block_head, multi_heap_get_allocated_size_impl(heap, block_head), true /* free */);
+#endif
+
+    multi_heap_free_impl(heap, block_head);
+    multi_heap_internal_unlock(heap);
 }
 
 void multi_heap_free_impl(multi_heap_handle_t heap, void *p)

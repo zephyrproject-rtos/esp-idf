@@ -15,10 +15,15 @@
 #include "driver/adc.h"
 #include "driver/dac.h"
 #include "esp_system.h"
-#include "esp_adc_cal.h"
 
-#define DAC_EXAMPLE_CHANNEL     CONFIG_DAC_EXAMPLE_CHANNEL
-#define ADC2_EXAMPLE_CHANNEL    CONFIG_ADC2_EXAMPLE_CHANNEL
+#define DAC_EXAMPLE_CHANNEL     CONFIG_EXAMPLE_DAC_CHANNEL
+#define ADC2_EXAMPLE_CHANNEL    CONFIG_EXAMPLE_ADC2_CHANNEL
+
+#if CONFIG_IDF_TARGET_ESP32
+static const adc_bits_width_t width = ADC_WIDTH_BIT_12;
+#elif CONFIG_IDF_TARGET_ESP32S2
+static const adc_bits_width_t width = ADC_WIDTH_BIT_13;
+#endif
 
 void app_main(void)
 {
@@ -28,11 +33,13 @@ void app_main(void)
 
     gpio_num_t adc_gpio_num, dac_gpio_num;
 
-    assert( adc2_pad_get_io_num( ADC2_EXAMPLE_CHANNEL, &adc_gpio_num ) == ESP_OK );
-    assert( dac_pad_get_io_num( DAC_EXAMPLE_CHANNEL, &dac_gpio_num ) == ESP_OK );
+    r = adc2_pad_get_io_num( ADC2_EXAMPLE_CHANNEL, &adc_gpio_num );
+    assert( r == ESP_OK );
+    r = dac_pad_get_io_num( DAC_EXAMPLE_CHANNEL, &dac_gpio_num );
+    assert( r == ESP_OK );
 
-    printf("ADC channel %d @ GPIO %d, DAC channel %d @ GPIO %d.\n", ADC2_EXAMPLE_CHANNEL, adc_gpio_num,
-                DAC_EXAMPLE_CHANNEL, dac_gpio_num );
+    printf("ADC2 channel %d @ GPIO %d, DAC channel %d @ GPIO %d.\n", ADC2_EXAMPLE_CHANNEL, adc_gpio_num,
+                DAC_EXAMPLE_CHANNEL + 1, dac_gpio_num );
 
     dac_output_enable( DAC_EXAMPLE_CHANNEL );
 
@@ -45,7 +52,7 @@ void app_main(void)
     printf("start conversion.\n");
     while(1) {
         dac_output_voltage( DAC_EXAMPLE_CHANNEL, output_data++ );
-        r = adc2_get_raw( ADC2_EXAMPLE_CHANNEL, ADC_WIDTH_12Bit, &read_raw);
+        r = adc2_get_raw( ADC2_EXAMPLE_CHANNEL, width, &read_raw);
         if ( r == ESP_OK ) {
             printf("%d: %d\n", output_data, read_raw );
         } else if ( r == ESP_ERR_INVALID_STATE ) {

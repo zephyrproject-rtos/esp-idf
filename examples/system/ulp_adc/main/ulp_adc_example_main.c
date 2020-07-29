@@ -27,14 +27,14 @@ extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_main_bin_end");
 /* This function is called once after power-on reset, to load ULP program into
  * RTC memory and configure the ADC.
  */
-static void init_ulp_program();
+static void init_ulp_program(void);
 
 /* This function is called every time before going into deep sleep.
  * It starts the ULP program and resets measurement counter.
  */
-static void start_ulp_program();
+static void start_ulp_program(void);
 
-void app_main()
+void app_main(void)
 {
     esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
     if (cause != ESP_SLEEP_WAKEUP_ULP) {
@@ -54,7 +54,7 @@ void app_main()
     esp_deep_sleep_start();
 }
 
-static void init_ulp_program()
+static void init_ulp_program(void)
 {
     esp_err_t err = ulp_load_binary(0, ulp_main_bin_start,
             (ulp_main_bin_end - ulp_main_bin_start) / sizeof(uint32_t));
@@ -64,7 +64,11 @@ static void init_ulp_program()
     /* Note: when changing channel here, also change 'adc_channel' constant
        in adc.S */
     adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_11);
+#if CONFIG_IDF_TARGET_ESP32
     adc1_config_width(ADC_WIDTH_BIT_12);
+#elif CONFIG_IDF_TARGET_ESP32S2
+    adc1_config_width(ADC_WIDTH_BIT_13);
+#endif
     adc1_ulp_enable();
 
     /* Set low and high thresholds, approx. 1.35V - 1.75V*/
@@ -76,19 +80,21 @@ static void init_ulp_program()
 
     /* Disconnect GPIO12 and GPIO15 to remove current drain through
      * pullup/pulldown resistors.
-     * GPIO15 may be connected to ground to suppress boot messages.
      * GPIO12 may be pulled high to select flash voltage.
      */
     rtc_gpio_isolate(GPIO_NUM_12);
     rtc_gpio_isolate(GPIO_NUM_15);
+#if CONFIG_IDF_TARGET_ESP32
+    esp_deep_sleep_disable_rom_logging(); // suppress boot messages
+#endif
 }
 
-static void start_ulp_program()
+static void start_ulp_program(void)
 {
     /* Reset sample counter */
     ulp_sample_counter = 0;
 
     /* Start the program */
-    esp_err_t err = ulp_run((&ulp_entry - RTC_SLOW_MEM) / sizeof(uint32_t));
+    esp_err_t err = ulp_run(&ulp_entry - RTC_SLOW_MEM);
     ESP_ERROR_CHECK(err);
 }

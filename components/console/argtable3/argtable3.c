@@ -30,6 +30,8 @@
 
 #include "argtable3.h"
 
+#pragma GCC diagnostic ignored "-Wclobbered"
+
 /*******************************************************************************
  * This file is part of the argtable3 library.
  *
@@ -3005,7 +3007,7 @@ static int trex_newnode(TRex *exp, TRexNodeType type)
 		exp->_nallocated *= 2;
 		exp->_nodes = (TRexNode *)realloc(exp->_nodes, exp->_nallocated * sizeof(TRexNode));
 	}
-	exp->_nodes[exp->_nsize++] = n;
+	exp->_nodes[exp->_nsize++] = n; // NOLINT(clang-analyzer-unix.Malloc)
 	newid = exp->_nsize - 1;
 	return (int)newid;
 }
@@ -3071,6 +3073,7 @@ static int trex_charnode(TRex *exp,TRexBool isclass)
 					exp->_p++;
 					return node;
 				} //else default
+				/* falls through */
 			default:
 				t = *exp->_p; exp->_p++;
 				return trex_newnode(exp,t);

@@ -1,10 +1,13 @@
-**************************************
-在 Mac OS 上安装 ESP32 工具链
-**************************************
+**********************************************
+MacOS 平台工具链的标准设置
+**********************************************
+
 :link_to_translation:`en:[English]`
 
 安装准备
-================
+=====================
+
+ESP-IDF 将使用 Mac OS 上默认安装的 Python 版本。
 
 - 安装 pip::
 
@@ -12,42 +15,34 @@
 
 - 安装 pyserial::
 
-    sudo pip install pyserial
+    pip install --user pyserial
 
+- 安装 CMake 和 Ninja 编译工具：
 
-安装工具链
-===============
+    - 若有 HomeBrew_，您可以运行::
 
-Mac OS 版本的 ESP32 工具链可以从以下地址下载：
+        brew install cmake ninja dfu-util
 
-https://dl.espressif.com/dl/xtensa-esp32-elf-osx-1.22.0-75-gbaf03c2-5.2.0.tar.gz
+    - 若有 MacPorts_，您可以运行::
 
-下载压缩文件之后，解压到 ``~/esp`` 目录中::
+        sudo port install cmake ninja dfu-util
 
-    mkdir -p ~/esp
-    cd ~/esp
-    tar -xzf ~/Downloads/xtensa-esp32-elf-osx-1.22.0-75-gbaf03c2-5.2.0.tar.gz
+    - 若以上均不适用，请访问 CMake_ 和 Ninja_ 主页，查询有关 Mac OS 平台的下载安装问题。
 
-.. _setup-macos-toolchain-add-it-to-path:
+- 强烈建议同时安装 ccache_ 以获得更快的编译速度。如有 HomeBrew_，可通过 MacPorts_ 上的 ``brew install ccache`` 或 ``sudo port install ccache`` 完成安装。
 
-工具链将被解压到 ``~/esp/xtensa-esp32-elf/`` 路径下。
+.. note::
+    
+    如您在上述任何步骤中遇到以下错误::
 
-在 ``~/.profile`` 文件中更新 ``PATH`` 环境变量以使用工具链。为了使 ``xtensa-esp32-elf`` 在各种终端会话中都可用，在 ``~/.profile`` 文件中加上以下指令::
+    ``xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools), missing xcrun at:/Library/Developer/CommandLineTools/usr/bin/xcrun``
 
-     export PATH=$PATH:$HOME/esp/xtensa-esp32-elf/bin
+    则必须安装 XCode 命令行工具，具体可运行 ``xcode-select --install``。
 
-或者，您可以为上述命令创建一个别名。这样只有执行以下指令时工具链才能被使用。将下面的指令添加到您的 ``〜/ .profile`` 文件中::
-
-    alias get_esp32="export PATH=$PATH:$HOME/esp/xtensa-esp32-elf/bin"
-
-当需要使用工具链时，在命令行里输入 ``get_esp32``，就可以将工具链添加到 ``PATH`` 中。
-
-
-下一步
+后续步骤
 ==========
 
-前往 :ref:`get-started-get-esp-idf` 继续配置开发环境。
-
+继续设置开发环境，请前往 :ref:`get-started-get-esp-idf` 章节。
 
 相关文档
 =================
@@ -56,4 +51,10 @@ https://dl.espressif.com/dl/xtensa-esp32-elf-osx-1.22.0-75-gbaf03c2-5.2.0.tar.gz
     :maxdepth: 1
 
     macos-setup-scratch
+
+.. _cmake: https://cmake.org/
+.. _ninja: https://ninja-build.org/
+.. _ccache: https://ccache.samba.org/
+.. _homebrew: https://brew.sh/
+.. _MacPorts: https://www.macports.org/install.php
 
