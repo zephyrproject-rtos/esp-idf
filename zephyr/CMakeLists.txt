@@ -7,12 +7,17 @@
 # to allow users to disable the HAL
 if(CONFIG_SOC_ESP32)
   zephyr_include_directories(
+    ../components/esp_common/include
+    ../components/esp_rom/include
     ../components/esp32/include
-    ../components/soc/esp32/include
+    ../components/xtensa/include
+    ../components/xtensa/esp32/include
+    ../components/soc/soc/include
+    ../components/soc/soc/esp32/include
     )
 
   zephyr_link_libraries(
     hal
-    -L${CMAKE_CURRENT_SOURCE_DIR}/../components/esp32
+    -L${CMAKE_CURRENT_SOURCE_DIR}/../components/xtensa/esp32
     )
 endif()
