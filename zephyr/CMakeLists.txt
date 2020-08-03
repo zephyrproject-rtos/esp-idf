@@ -14,6 +14,26 @@ if(CONFIG_SOC_ESP32)
     ../components/xtensa/esp32/include
     ../components/soc/soc/include
     ../components/soc/soc/esp32/include
+    ../components/soc/include
+    ../components/soc/src/esp32/include
+    ../components/driver/include
+    ../components/soc/soc/esp32
+    ../components/esp_wifi/include
+    ../components/efuse/esp32/include
+    ../components/efuse/include
+    ../components/esp_system/include
+    ../components/esp_wifi/esp32/include
+    ../components/esp_timer/include
+    ../components/esp_timer/private_include
+    ../components/esp_netif/include
+    ../components/esp_event/include
+    ../components/log/include
+    ../components/wpa_supplicant/include
+    ../components/wpa_supplicant/port/include
+    ../components/wpa_supplicant/src
+    ../components/wpa_supplicant/include/esp_supplicant
+    ../components/wpa_supplicant/src/crypto
+    ../components/wpa_supplicant/src
     )
 
   zephyr_link_libraries(
