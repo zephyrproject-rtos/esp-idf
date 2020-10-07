@@ -40,6 +40,7 @@ if(CONFIG_SOC_ESP32)
     ../components/spi_flash/private_include
     ../components/bootloader_support/include
     adapter/include
+    adapter/include/crypto
     )
 
   zephyr_link_libraries(
